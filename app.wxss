@@ -1,0 +1,18 @@
+/* app.wxss —— 全局基础样式（浅色冷色系工程化主题） */
+page {
+  box-sizing: border-box;
+  background-color: #f5f6f8;
+  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  color: #1f2329;
+  font-size: 28rpx;
+  line-height: 1.5;
+}
+
+view,
+text,
+button,
+input,
+textarea,
+picker {
+  box-sizing: border-box;
+}

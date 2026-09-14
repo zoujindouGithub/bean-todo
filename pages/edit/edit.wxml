@@ -1,0 +1,56 @@
+<!-- pages/edit/edit.wxml -->
+<view class="page">
+  <view class="form-card">
+    <view class="field">
+      <text class="label">标题<text class="req">*</text></text>
+      <input
+        class="input"
+        placeholder="请输入待办标题"
+        value="{{title}}"
+        maxlength="60"
+        bindinput="onTitleInput"
+      />
+    </view>
+
+    <view class="field">
+      <text class="label">描述</text>
+      <textarea
+        class="textarea"
+        placeholder="补充说明（可选）"
+        value="{{desc}}"
+        maxlength="500"
+        auto-height
+        bindinput="onDescInput"
+      />
+    </view>
+
+    <view class="field">
+      <text class="label">优先级</text>
+      <view class="seg">
+        <view
+          wx:for="{{priorities}}"
+          wx:key="*this"
+          class="seg-item seg-item--{{item}} {{priority === item ? 'seg-item--active' : ''}}"
+          data-priority="{{item}}"
+          data-index="{{index}}"
+          bindtap="onPriorityTap"
+        >{{priorityLabels[item]}}</view>
+      </view>
+    </view>
+
+    <view class="field">
+      <text class="label">到期日</text>
+      <picker mode="date" value="{{dueDate}}" bindchange="onDateChange">
+        <view class="picker">
+          <text class="picker-text">{{dueDate || '未设置'}}</text>
+          <text class="picker-arrow">›</text>
+        </view>
+      </picker>
+    </view>
+  </view>
+
+  <view class="actions">
+    <button class="btn btn--primary" loading="{{saving}}" bindtap="onSave">保存</button>
+    <button wx:if="{{isEdit}}" class="btn btn--danger" bindtap="onDelete">删除</button>
+  </view>
+</view>

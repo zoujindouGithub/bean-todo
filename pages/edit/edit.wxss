@@ -1,0 +1,116 @@
+/* pages/edit/edit.wxss */
+.page {
+  min-height: 100vh;
+  padding: 24rpx;
+}
+
+.form-card {
+  background: #ffffff;
+  border-radius: 16rpx;
+  padding: 8rpx 28rpx;
+  box-shadow: 0 4rpx 16rpx rgba(31, 35, 41, 0.04);
+}
+.field {
+  padding: 28rpx 0;
+  border-bottom: 1rpx solid #f0f1f3;
+}
+.field:last-child {
+  border-bottom: none;
+}
+.label {
+  display: block;
+  font-size: 26rpx;
+  color: #6b7280;
+  margin-bottom: 16rpx;
+}
+.req {
+  color: #e5484d;
+  margin-left: 4rpx;
+}
+.input {
+  font-size: 30rpx;
+  color: #1f2329;
+  height: 56rpx;
+}
+.textarea {
+  font-size: 30rpx;
+  color: #1f2329;
+  width: 100%;
+  min-height: 120rpx;
+  line-height: 1.5;
+}
+
+/* 优先级分段控件 */
+.seg {
+  display: flex;
+  background: #f0f1f3;
+  border-radius: 12rpx;
+  padding: 6rpx;
+}
+.seg-item {
+  flex: 1;
+  text-align: center;
+  font-size: 28rpx;
+  color: #6b7280;
+  padding: 14rpx 0;
+  border-radius: 10rpx;
+  transition: background 0.2s, color 0.2s;
+}
+.seg-item--active.seg-item--low {
+  background: #9aa3af;
+  color: #ffffff;
+}
+.seg-item--active.seg-item--normal {
+  background: #2f6fed;
+  color: #ffffff;
+}
+.seg-item--active.seg-item--high {
+  background: #e5484d;
+  color: #ffffff;
+}
+
+/* 日期选择 */
+.picker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 30rpx;
+  padding: 8rpx 0;
+}
+.picker-text {
+  color: #1f2329;
+}
+.picker-arrow {
+  font-size: 36rpx;
+  color: #9aa3af;
+  line-height: 1;
+}
+
+/* 操作按钮 */
+.actions {
+  margin-top: 40rpx;
+}
+/* 去除原生 button 默认的 1px ::after 边框（app.json 使用 style: v2） */
+button::after {
+  border: none;
+}
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24rpx;
+  border-radius: 16rpx;
+  padding: 0;
+  font-size: 32rpx;
+  line-height: 1;
+  height: 88rpx;
+}
+.btn--primary {
+  background: #2f6fed;
+  color: #ffffff;
+}
+.btn--danger {
+  background: #ffffff;
+  color: #e5484d;
+  border: 1rpx solid #f3c2c4;
+}
