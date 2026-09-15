@@ -1,5 +1,6 @@
 // pages/index/index.js
 const { TodoManager } = require('../../utils/todo');
+const { getDueStatus } = require('../../utils/date-helper');
 const todoManager = new TodoManager();
 
 const FILTERS = {
@@ -71,8 +72,8 @@ const PRIORITY_LABELS = { low: '低', normal: '中', high: '高' };
     this.setData({ loading: true });
     try {
       const results = await Promise.all([
-        todoManager.list(this.buildWhere(this.data.activeFilter)),
-        todoManager.list({})
+        todoManager.list(this.buildWhere(this.data.activeFilter), { sortBy: 'smart' }),
+        todoManager.list({}, { sortBy: 'smart' })
       ]);
       const list = results[0];
       const all = results[1];
@@ -98,13 +99,16 @@ const PRIORITY_LABELS = { low: '低', normal: '中', high: '高' };
    * 为列表项补充展示用字段（优先级标签文案/颜色）。
    */
   decorate(list) {
+    const now = new Date();
     return list.map((it) => {
       const meta = PRIORITY_META[it.priority] || PRIORITY_META.normal;
+      const due = getDueStatus(it.dueDate, it.completed, now);
       return {
         ...it,
         priorityLabel: meta.label,
         priorityColor: meta.color,
-        priorityBg: meta.bg
+        priorityBg: meta.bg,
+        dueMeta: due
       };
     });
   },

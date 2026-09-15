@@ -19,6 +19,8 @@
 
 const STORAGE_KEY = 'bean_todo_items_v1';
 
+const { sortTodoList } = require('./date-helper');
+
 /**
  * 把各种时间表示统一成毫秒时间戳，无法识别时返回 0。
  * 兼容 Date / 数字 / ISO 字符串，避免历史数据或脏数据导致排序异常。
@@ -88,13 +90,19 @@ class TodoManager {
   /**
    * 查询待办列表。
    * @param {Object} [filter={}] 查询条件，如 { completed: false }
-   * @returns {Promise<Array<Object>>} 按创建时间倒序的待办数组
+   * @param {Object} [options={}] 排序选项
+   * @param {('createdAt'|'smart')} [options.sortBy='createdAt'] 排序方式，'createdAt' 为按创建时间倒序，'smart' 为按截止日期紧迫度与优先级智能排序
+   * @param {Date} [options.now=new Date()] 基准时间（用于日期比对）
+   * @returns {Promise<Array<Object>>} 待办数组
    */
-  async list(filter = {}) {
+  async list(filter = {}, options = {}) {
     const keys = Object.keys(filter || {});
-    return readAll()
-      .filter((it) => keys.every((k) => it[k] === filter[k]))
-      .sort((a, b) => b.createdAt - a.createdAt);
+    const filtered = readAll().filter((it) => keys.every((k) => it[k] === filter[k]));
+    const sortBy = options.sortBy || 'createdAt';
+    if (sortBy === 'smart') {
+      return sortTodoList(filtered, options.now || new Date());
+    }
+    return filtered.sort((a, b) => b.createdAt - a.createdAt);
   }
 
   /**

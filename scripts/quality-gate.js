@@ -193,14 +193,15 @@ try {
 
 // 5. 自动化测试套件
 console.log(`\n${c.bold}[5/6] 运行核心数据层与业务模型单元测试...${c.reset}`);
-const testRes = spawnSync(process.execPath, ['--test', 'tests/datastore.test.js'], {
+const testFiles = findFiles(path.join(rootDir, 'tests'), '.test.js');
+const testRes = spawnSync(process.execPath, ['--test', ...testFiles], {
   cwd: rootDir,
   encoding: 'utf8'
 });
 if (testRes.status === 0) {
-  pass('全量 42 个数据层用例全部通过，零回归');
+  pass(`全量 ${testFiles.length} 个测试套件（含数据层与智能排序算法）全部通过，零回归`);
 } else {
-  fail('数据层测试未通过', testRes.stdout || testRes.stderr);
+  fail('单元测试套件未通过', testRes.stdout || testRes.stderr);
 }
 
 // 6. 单文件大小与未打包资产检查

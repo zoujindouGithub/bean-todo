@@ -118,19 +118,54 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
+  gap: 12rpx;
 }
 .tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 38rpx;
   font-size: 22rpx;
-  padding: 4rpx 14rpx;
+  padding: 0 14rpx;
   border-radius: 8rpx;
-  margin-right: 16rpx;
+  line-height: 1;
+  box-sizing: border-box;
 }
-.due {
-  font-size: 24rpx;
-  color: #6b7280;
+.due-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 38rpx;
+  padding: 0 14rpx;
+  border-radius: 8rpx;
+  font-size: 22rpx;
+  font-weight: 500;
+  line-height: 1;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
 }
-.due--warn {
-  color: #e5484d;
+.due-dot {
+  width: 10rpx;
+  height: 10rpx;
+  border-radius: 50%;
+  margin-right: 8rpx;
+  flex-shrink: 0;
+}
+.due-text {
+  line-height: 1;
+}
+.due-pill--overdue {
+  font-weight: 600;
+  box-shadow: 0 0 0 1rpx rgba(229, 72, 77, 0.18) inset;
+}
+.due-pill--today {
+  font-weight: 600;
+  box-shadow: 0 0 0 1rpx rgba(224, 62, 26, 0.18) inset;
+}
+.due-pill--tomorrow {
+  font-weight: 500;
+}
+.due-pill--completed {
+  opacity: 0.75;
 }
 
 /* 空状态 */

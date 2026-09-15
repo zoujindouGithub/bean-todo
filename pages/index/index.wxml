@@ -49,7 +49,14 @@
         <view class="todo-title {{item.completed ? 'todo-title--done' : ''}}">{{item.title}}</view>
         <view class="todo-meta">
           <text class="tag" style="color: {{item.priorityColor}}; background: {{item.priorityBg}};">{{item.priorityLabel}}</text>
-          <text wx:if="{{item.dueDate}}" class="due {{item.completed ? '' : 'due--warn'}}">截止 {{item.dueDate}}</text>
+          <view
+            wx:if="{{item.dueDate && item.dueMeta}}"
+            class="due-pill due-pill--{{item.dueMeta.type}}"
+            style="color: {{item.dueMeta.color}}; background: {{item.dueMeta.bg}};"
+          >
+            <view class="due-dot" style="background: {{item.dueMeta.color}};"></view>
+            <text class="due-text">{{item.dueMeta.label}}</text>
+          </view>
         </view>
       </view>
     </view>
