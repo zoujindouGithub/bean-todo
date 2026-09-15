@@ -9,6 +9,10 @@
       {
         "type": "folder",
         "value": ".zvec-grep"
+      },
+      {
+        "type": "folder",
+        "value": "assets"
       }
     ],
     "include": []
