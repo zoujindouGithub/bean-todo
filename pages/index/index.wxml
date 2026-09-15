@@ -65,5 +65,71 @@
   </view>
 
   <!-- 悬浮新增按钮 -->
-  <view class="fab" bindtap="goCreate">+</view>
+  <view class="fab" bindtap="openCreateDrawer">+</view>
+
+  <!-- 快速新增半屏模态框（Bottom Sheet） -->
+  <view
+    class="drawer-mask {{showCreateDrawer ? 'drawer-mask--show' : ''}}"
+    bindtap="closeCreateDrawer"
+    catchtouchmove="noop"
+  ></view>
+  <view
+    class="drawer {{showCreateDrawer ? 'drawer--show' : ''}}"
+    catchtouchmove="noop"
+  >
+    <view class="drawer-header">
+      <text class="drawer-title">新增待办</text>
+      <view class="drawer-close" bindtap="closeCreateDrawer">✕</view>
+    </view>
+
+    <view class="drawer-body">
+      <input
+        class="drawer-input"
+        placeholder="准备做什么？"
+        placeholder-class="drawer-placeholder"
+        value="{{newTitle}}"
+        focus="{{inputFocus}}"
+        maxlength="60"
+        bindinput="onNewTitleInput"
+        confirm-type="done"
+        bindconfirm="onSaveCreate"
+      />
+
+      <input
+        class="drawer-desc"
+        placeholder="补充说明（可选）"
+        placeholder-class="drawer-placeholder--sub"
+        value="{{newDesc}}"
+        maxlength="500"
+        bindinput="onNewDescInput"
+      />
+
+      <view class="drawer-tools">
+        <view class="drawer-seg">
+          <view
+            wx:for="{{priorities}}"
+            wx:key="*this"
+            class="drawer-seg-item drawer-seg-item--{{item}} {{newPriority === item ? 'drawer-seg-item--active' : ''}}"
+            data-priority="{{item}}"
+            data-index="{{index}}"
+            bindtap="onNewPriorityTap"
+          >{{priorityLabels[item]}}</view>
+        </view>
+
+        <picker mode="date" value="{{newDueDate}}" bindchange="onNewDateChange">
+          <view class="drawer-picker {{newDueDate ? 'drawer-picker--active' : ''}}">
+            <text class="picker-label">{{newDueDate ? newDueDate : '截止日'}}</text>
+            <text wx:if="{{newDueDate}}" class="picker-clear" catchtap="onClearNewDueDate">×</text>
+          </view>
+        </picker>
+      </view>
+
+      <button
+        class="drawer-submit-btn"
+        loading="{{creating}}"
+        disabled="{{creating}}"
+        bindtap="onSaveCreate"
+      >保存待办</button>
+    </view>
+  </view>
 </view>

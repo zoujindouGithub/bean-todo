@@ -14,23 +14,36 @@ const PRIORITY_META = {
   normal: { label: '中', color: '#2f6fed', bg: '#e7efff' },
   high: { label: '高', color: '#e5484d', bg: '#fdeaeb' }
 };
+const PRIORITIES = ['low', 'normal', 'high'];
+const PRIORITY_LABELS = { low: '低', normal: '中', high: '高' };
 
-Page({
-  data: {
-    // 当前过滤：all | active | completed
-    activeFilter: FILTERS.ALL,
-    // 过滤 Tab 配置
-    filters: [
-      { key: FILTERS.ALL, label: '全部' },
-      { key: FILTERS.ACTIVE, label: '进行中' },
-      { key: FILTERS.COMPLETED, label: '已完成' }
-    ],
-    // 列表数据（已补充展示字段）
-    list: [],
-    // 统计：全部 / 进行中 / 已完成
-    stats: { total: 0, active: 0, completed: 0 },
-    loading: false
-  },
+ Page({
+   data: {
+     // 当前过滤：all | active | completed
+     activeFilter: FILTERS.ALL,
+     // 过滤 Tab 配置
+     filters: [
+       { key: FILTERS.ALL, label: '全部' },
+       { key: FILTERS.ACTIVE, label: '进行中' },
+       { key: FILTERS.COMPLETED, label: '已完成' }
+     ],
+     // 列表数据（已补充展示字段）
+     list: [],
+     // 统计：全部 / 进行中 / 已完成
+     stats: { total: 0, active: 0, completed: 0 },
+    loading: false,
+    // 快速新增半屏抽屉
+    showCreateDrawer: false,
+    inputFocus: false,
+    newTitle: '',
+    newDesc: '',
+    newPriority: 'normal',
+    newPriorityIndex: 1,
+    newDueDate: '',
+    priorities: PRIORITIES,
+    priorityLabels: PRIORITY_LABELS,
+    creating: false
+   },
 
   onShow() {
     this.loadTodos();
@@ -148,10 +161,100 @@ Page({
   /**
    * 跳转到新增页。
    */
-  goCreate() {
-    wx.navigateTo({ url: '/pages/edit/edit' });
+  /**
+   * 打开快速新增半屏抽屉
+   */
+  openCreateDrawer() {
+    this.setData({
+      showCreateDrawer: true,
+      inputFocus: false,
+      newTitle: '',
+      newDesc: '',
+      newPriority: 'normal',
+      newPriorityIndex: 1,
+      newDueDate: '',
+      creating: false
+    });
+    // 动画就绪后自动唤起输入聚焦
+    setTimeout(() => {
+      if (this.data.showCreateDrawer) {
+        this.setData({ inputFocus: true });
+      }
+    }, 200);
   },
 
+  /**
+   * 关闭快速新增半屏抽屉
+   */
+  closeCreateDrawer() {
+    this.setData({
+      showCreateDrawer: false,
+      inputFocus: false
+    });
+  },
+
+  /**
+   * 空方法，用于阻止蒙层下的页面触摸滚动穿透
+   */
+  noop() {},
+
+  onNewTitleInput(e) {
+    this.setData({ newTitle: e.detail.value });
+  },
+
+  onNewDescInput(e) {
+    this.setData({ newDesc: e.detail.value });
+  },
+
+  onNewPriorityTap(e) {
+    const idx = Number(e.currentTarget.dataset.index);
+    this.setData({
+      newPriorityIndex: idx,
+      newPriority: PRIORITIES[idx]
+    });
+  },
+
+  onNewDateChange(e) {
+    this.setData({ newDueDate: e.detail.value });
+  },
+
+  onClearNewDueDate() {
+    this.setData({ newDueDate: '' });
+  },
+
+  /**
+   * 保存新增待办并刷新主页列表
+   */
+  async onSaveCreate() {
+    const { newTitle, newDesc, newPriority, newDueDate, creating } = this.data;
+    if (creating) return;
+    if (!newTitle || !newTitle.trim()) {
+      wx.showToast({ title: '请输入待办标题', icon: 'none' });
+      return;
+    }
+
+    this.setData({ creating: true });
+    try {
+      await todoManager.create({
+        title: newTitle.trim(),
+        desc: newDesc ? newDesc.trim() : '',
+        priority: newPriority,
+        dueDate: newDueDate || ''
+      });
+      wx.showToast({ title: '已添加', icon: 'success' });
+      this.closeCreateDrawer();
+      this.loadTodos();
+    } catch (err) {
+      console.error('新增待办失败:', err);
+      wx.showToast({ title: err.message || '添加失败', icon: 'none' });
+    } finally {
+      this.setData({ creating: false });
+    }
+  },
+
+  goCreate() {
+    this.openCreateDrawer();
+  },
   /**
    * 点击卡片：跳转到编辑页。
    */
