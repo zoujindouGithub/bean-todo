@@ -6,9 +6,10 @@
  * 检查范围：
  * 1. JavaScript 语法校验 (node --check)
  * 2. 全量 JSON 配置文件有效性与防格式损坏
- * 3. 小程序项目配置健全性 (pages 完整性、按需注入、打包忽略规则)
- * 4. 自动化核心数据层与模型单测 (tests/datastore.test.js)
- * 5. 代码包大文件资源限制校验 (单文件 <= 200KB 门禁)
+ * 3. WXML 模板标签闭合与配对完整性校验 (防 end tag missing)
+ * 4. 小程序项目配置健全性 (pages 完整性、按需注入、打包忽略规则)
+ * 5. 自动化核心数据层与模型单测 (tests/datastore.test.js)
+ * 6. 代码包大文件资源限制校验 (单文件 <= 200KB 门禁)
  */
 
 const fs = require('fs');
@@ -66,7 +67,7 @@ function findFiles(dir, ext, ignoreDirs = ['.git', 'node_modules', '.zvec-grep']
 }
 
 // 1. JavaScript 语法校验
-console.log(`${c.bold}[1/5] 校验 JavaScript 语法正确性...${c.reset}`);
+console.log(`${c.bold}[1/6] 校验 JavaScript 语法正确性...${c.reset}`);
 const jsFiles = findFiles(rootDir, '.js');
 let jsOk = true;
 for (const file of jsFiles) {
@@ -82,7 +83,7 @@ if (jsOk) {
 }
 
 // 2. 全量 JSON 配置文件校验
-console.log(`\n${c.bold}[2/5] 校验 JSON 配置文件有效性...${c.reset}`);
+console.log(`\n${c.bold}[2/6] 校验 JSON 配置文件有效性...${c.reset}`);
 const jsonFiles = findFiles(rootDir, '.json');
 let jsonOk = true;
 for (const file of jsonFiles) {
@@ -99,8 +100,53 @@ if (jsonOk) {
   pass(`已解析全部 ${jsonFiles.length} 个 JSON 配置文件，格式合法`);
 }
 
-// 3. 小程序配置健全性校验
-console.log(`\n${c.bold}[3/5] 检查小程序项目配置完整性...${c.reset}`);
+// 3. WXML 模板标签闭合完整性校验
+console.log(`\n${c.bold}[3/6] 校验 WXML 模板标签配对与闭合...${c.reset}`);
+const wxmlFiles = findFiles(rootDir, '.wxml');
+let wxmlOk = true;
+const tagRegex = /<\/?([a-zA-Z0-9-]+)(?:\s+[^>]*?)?(\/?)>/g;
+const selfClosingTags = ['input', 'image'];
+
+for (const file of wxmlFiles) {
+  const rel = path.relative(rootDir, file);
+  const content = fs.readFileSync(file, 'utf8');
+  const stack = [];
+  let match;
+  while ((match = tagRegex.exec(content)) !== null) {
+    const full = match[0];
+    const tag = match[1];
+    const isSelfClosing = match[2] === '/' || full.endsWith('/>') || selfClosingTags.includes(tag);
+    const isClose = full.startsWith('</');
+
+    if (isSelfClosing && !isClose) {
+      continue;
+    } else if (isClose) {
+      if (stack.length === 0) {
+        wxmlOk = false;
+        fail(`WXML 标签错误: ${rel}`, `多余闭合标签 </${tag}>`);
+      } else {
+        const top = stack.pop();
+        if (top.tag !== tag) {
+          wxmlOk = false;
+          fail(`WXML 标签不匹配: ${rel}`, `期望闭合 <${top.tag}> (第 ${top.line} 行), 实际遇到 </${tag}>`);
+        }
+      }
+    } else {
+      const line = content.slice(0, match.index).split('\n').length;
+      stack.push({ tag, line });
+    }
+  }
+  if (stack.length > 0) {
+    wxmlOk = false;
+    fail(`WXML 缺少闭合标签: ${rel}`, `未闭合标签: <${stack[stack.length - 1].tag}> (第 ${stack[stack.length - 1].line} 行)`);
+  }
+}
+if (wxmlOk) {
+  pass(`已扫描全部 ${wxmlFiles.length} 个 WXML 模板，所有标签闭合与配对完整`);
+}
+
+// 4. 小程序配置健全性校验
+console.log(`\n${c.bold}[4/6] 检查小程序项目配置完整性...${c.reset}`);
 try {
   const appJsonPath = path.join(rootDir, 'app.json');
   const projectConfigPath = path.join(rootDir, 'project.config.json');
@@ -145,8 +191,8 @@ try {
   fail('小程序配置读取失败', err);
 }
 
-// 4. 自动化测试套件
-console.log(`\n${c.bold}[4/5] 运行核心数据层与业务模型单元测试...${c.reset}`);
+// 5. 自动化测试套件
+console.log(`\n${c.bold}[5/6] 运行核心数据层与业务模型单元测试...${c.reset}`);
 const testRes = spawnSync(process.execPath, ['--test', 'tests/datastore.test.js'], {
   cwd: rootDir,
   encoding: 'utf8'
@@ -157,8 +203,8 @@ if (testRes.status === 0) {
   fail('数据层测试未通过', testRes.stdout || testRes.stderr);
 }
 
-// 5. 单文件大小与未打包资产检查
-console.log(`\n${c.bold}[5/5] 扫描代码包体积与大资源约束...${c.reset}`);
+// 6. 单文件大小与未打包资产检查
+console.log(`\n${c.bold}[6/6] 扫描代码包体积与大资源约束...${c.reset}`);
 const MAX_FILE_SIZE = 200 * 1024; // 200KB
 let largeFileFound = false;
 
