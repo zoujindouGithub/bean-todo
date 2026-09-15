@@ -41,10 +41,12 @@
       bindlongpress="onLongPressDelete"
     >
       <view
-        class="check {{item.completed ? 'check--done' : ''}}"
+        class="check-hitbox"
         catchtap="onToggle"
         data-id="{{item._id}}"
-      ></view>
+      >
+        <view class="check {{item.completed ? 'check--done' : ''}}"></view>
+      </view>
       <view class="todo-body">
         <view class="todo-title {{item.completed ? 'todo-title--done' : ''}}">{{item.title}}</view>
         <view class="todo-meta">
@@ -83,7 +85,17 @@
     catchtouchmove="noop"
   >
     <view class="drawer-header">
-      <text class="drawer-title">{{isDrawerEdit ? '编辑待办' : '新增待办'}}</text>
+      <view class="drawer-header-left">
+        <text class="drawer-title">{{isDrawerEdit ? '编辑待办' : '新增待办'}}</text>
+        <view
+          wx:if="{{isDrawerEdit}}"
+          class="drawer-status-pill {{editCompleted ? 'drawer-status-pill--done' : ''}}"
+          catchtap="onToggleDrawerComplete"
+        >
+          <view class="drawer-status-icon"></view>
+          <text class="drawer-status-text">{{editCompleted ? '已完成' : '标记完成'}}</text>
+        </view>
+      </view>
       <view class="drawer-close" bindtap="closeCreateDrawer"></view>
     </view>
 

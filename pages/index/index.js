@@ -37,6 +37,7 @@ const PRIORITY_LABELS = { low: '低', normal: '中', high: '高' };
     showCreateDrawer: false,
     isDrawerEdit: false,
     editId: '',
+    editCompleted: false,
     inputFocus: false,
     newTitle: '',
     newDesc: '',
@@ -123,16 +124,32 @@ const PRIORITY_LABELS = { low: '低', normal: '中', high: '高' };
   },
 
   /**
-   * 点击勾选框：切换完成态（用 catchtap 阻止冒泡到卡片的编辑跳转）。
+   * 点击勾选框：切换完成态（大热区 catchtap，含马达微触感与原位弹跳划线缓冲）。
    */
   async onToggle(e) {
     const id = e.currentTarget.dataset.id;
+    if (!id) return;
+    // 1. 触发轻微马达触感震动反馈 (微动效多巴胺闭环)
+    if (typeof wx !== 'undefined' && wx.vibrateShort) {
+      wx.vibrateShort({ type: 'light' });
+    }
+    // 2. 原位乐观更新：让用户立即看到对勾弹跳与文字划线，避免突兀瞬移
+    const currentList = this.data.list || [];
+    const target = currentList.find((it) => it._id === id);
+    if (target) {
+      target.completed = !target.completed;
+      this.setData({ list: this.decorate(currentList) });
+    }
+    // 3. 持久化并留出 0.24s 动效播放时间后刷新排序/过滤
     try {
       await todoManager.toggle(id);
-      this.loadTodos();
+      setTimeout(() => {
+        this.loadTodos();
+      }, 240);
     } catch (err) {
       console.error('切换状态失败:', err);
       wx.showToast({ title: '操作失败', icon: 'none' });
+      this.loadTodos();
     }
   },
 
@@ -213,8 +230,35 @@ const PRIORITY_LABELS = { low: '低', normal: '中', high: '高' };
       newPriority: item.priority || 'normal',
       newPriorityIndex: idx >= 0 ? idx : 1,
       newDueDate: item.dueDate || '',
+      editCompleted: !!item.completed,
       creating: false
     });
+  },
+
+  /**
+   * 抽屉顶栏完成状态切换
+   */
+  async onToggleDrawerComplete() {
+    const { editId, editCompleted } = this.data;
+    if (!editId) return;
+    if (typeof wx !== 'undefined' && wx.vibrateShort) {
+      wx.vibrateShort({ type: 'light' });
+    }
+    const nextCompleted = !editCompleted;
+    this.setData({ editCompleted: nextCompleted });
+    try {
+      await todoManager.toggle(editId);
+      wx.showToast({
+        title: nextCompleted ? '已标记为完成' : '已设为进行中',
+        icon: 'success',
+        duration: 1500
+      });
+      this.loadTodos();
+    } catch (err) {
+      console.error('抽屉内切换完成状态失败:', err);
+      this.setData({ editCompleted });
+      wx.showToast({ title: '操作失败', icon: 'none' });
+    }
   },
 
   /**
