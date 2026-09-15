@@ -46,10 +46,14 @@
 }
 .filter-tab {
   flex: 1;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 28rpx;
   color: #6b7280;
-  padding: 16rpx 0;
+  height: 64rpx;
+  line-height: 1;
+  padding: 0;
   border-radius: 12rpx;
   transition: background 0.2s;
 }
@@ -77,19 +81,24 @@
   border-radius: 50%;
   border: 2rpx solid #c8cdd4;
   margin-right: 24rpx;
-  margin-top: 4rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  margin-top: 2rpx;
+  position: relative;
+  transition: border-color 0.2s, background 0.2s;
 }
 .check--done {
   background: #2f6fed;
   border-color: #2f6fed;
 }
-.check-mark {
-  color: #ffffff;
-  font-size: 28rpx;
-  line-height: 1;
+.check--done::after {
+  content: '';
+  position: absolute;
+  top: 42%;
+  left: 50%;
+  width: 12rpx;
+  height: 22rpx;
+  border-bottom: 4rpx solid #ffffff;
+  border-right: 4rpx solid #ffffff;
+  transform: translate(-50%, -50%) rotate(45deg);
 }
 .todo-body {
   flex: 1;
@@ -168,14 +177,30 @@
   height: 96rpx;
   border-radius: 50%;
   background: #2f6fed;
-  color: #ffffff;
-  font-size: 56rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
   box-shadow: 0 8rpx 24rpx rgba(47, 111, 237, 0.36);
   z-index: 90;
+  transition: transform 0.15s, opacity 0.15s;
+}
+.fab:active {
+  transform: scale(0.95);
+}
+.fab::before,
+.fab::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  background: #ffffff;
+  border-radius: 4rpx;
+  transform: translate(-50%, -50%);
+}
+.fab::before {
+  width: 40rpx;
+  height: 5rpx;
+}
+.fab::after {
+  width: 5rpx;
+  height: 40rpx;
 }
 
 /* 快速新增半屏模态框（Bottom Sheet） */
@@ -230,16 +255,29 @@
   letter-spacing: 0.5rpx;
 }
 .drawer-close {
+  position: relative;
   width: 56rpx;
   height: 56rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 28rpx;
-  color: #9aa3af;
   border-radius: 50%;
   background: #f5f6f8;
   transition: background 0.15s;
+}
+.drawer-close::before,
+.drawer-close::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 24rpx;
+  height: 3rpx;
+  background: #8c939f;
+  border-radius: 2rpx;
+}
+.drawer-close::before {
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+.drawer-close::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
 }
 
 .drawer-body {
@@ -288,7 +326,12 @@
   padding: 4rpx;
 }
 .drawer-seg-item {
-  padding: 10rpx 20rpx;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  height: 48rpx;
+  padding: 0 20rpx;
   font-size: 24rpx;
   color: #6b7280;
   border-radius: 10rpx;
@@ -310,8 +353,11 @@
 .drawer-picker {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  line-height: 1;
+  height: 56rpx;
   background: #f5f6f8;
-  padding: 10rpx 20rpx;
+  padding: 0 20rpx;
   border-radius: 12rpx;
   font-size: 24rpx;
   color: #6b7280;
@@ -322,11 +368,17 @@
   color: #2f6fed;
   font-weight: 500;
 }
+.picker-label {
+  line-height: 1;
+}
 .picker-clear {
   margin-left: 10rpx;
-  font-size: 28rpx;
+  font-size: 26rpx;
   line-height: 1;
   color: #9aa3af;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .drawer-submit-btn {

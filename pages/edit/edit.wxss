@@ -49,10 +49,14 @@
 }
 .seg-item {
   flex: 1;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 28rpx;
   color: #6b7280;
-  padding: 14rpx 0;
+  height: 64rpx;
+  line-height: 1;
+  padding: 0;
   border-radius: 10rpx;
   transition: background 0.2s, color 0.2s;
 }
@@ -81,7 +85,10 @@
   color: #1f2329;
 }
 .picker-arrow {
-  font-size: 36rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32rpx;
   color: #9aa3af;
   line-height: 1;
 }

@@ -44,9 +44,7 @@
         class="check {{item.completed ? 'check--done' : ''}}"
         catchtap="onToggle"
         data-id="{{item._id}}"
-      >
-        <text wx:if="{{item.completed}}" class="check-mark">✓</text>
-      </view>
+      ></view>
       <view class="todo-body">
         <view class="todo-title {{item.completed ? 'todo-title--done' : ''}}">{{item.title}}</view>
         <view class="todo-meta">
@@ -65,7 +63,7 @@
   </view>
 
   <!-- 悬浮新增按钮 -->
-  <view class="fab" bindtap="openCreateDrawer">+</view>
+  <view class="fab" bindtap="openCreateDrawer"></view>
 
   <!-- 快速新增半屏模态框（Bottom Sheet） -->
   <view
@@ -79,7 +77,7 @@
   >
     <view class="drawer-header">
       <text class="drawer-title">新增待办</text>
-      <view class="drawer-close" bindtap="closeCreateDrawer">✕</view>
+      <view class="drawer-close" bindtap="closeCreateDrawer"></view>
     </view>
 
     <view class="drawer-body">
