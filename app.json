@@ -12,5 +12,11 @@
   },
   "style": "v2",
   "lazyCodeLoading": "requiredComponents",
+  "permission": {
+    "scope.addPhoneCalendar": {
+      "desc": "用于将待办截止日期添加到手机系统日历强提醒"
+    }
+  },
+  "__usePrivacyCheck__": true,
   "sitemapLocation": "sitemap.json"
 }

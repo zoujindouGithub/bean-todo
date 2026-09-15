@@ -115,4 +115,25 @@ test('addTodoToPhoneCalendar 接口包装与调用契约测试', async (t) => {
     assert.equal(res.status, 'denied');
     assert.equal(showModalCalled, true);
   });
+
+  await t.test('未配置隐私协议时应准确捕获 privacy_missing 并弹窗明示', async () => {
+    let showModalCalled = false;
+    global.wx = {
+      addPhoneCalendar(options) {
+        options.fail({ errMsg: 'addPhoneCalendar:fail api scope is not declared in the privacy agreement' });
+      },
+      showModal(options) {
+        showModalCalled = true;
+      }
+    };
+
+    const res = await addTodoToPhoneCalendar({
+      title: '买牛奶',
+      dueDate: '2026-09-26'
+    });
+
+    assert.equal(res.success, false);
+    assert.equal(res.status, 'privacy_missing');
+    assert.equal(showModalCalled, true);
+  });
 });
