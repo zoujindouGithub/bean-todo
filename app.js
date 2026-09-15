@@ -8,7 +8,21 @@
 //   1. 在 onLaunch 里补上 wx.cloud.init({ env: '<你的环境 ID>', traceUser: true });
 //   2. 把 utils/todo.js 的内部实现换成 wx.cloud.database() 版本即可，
 //      对外接口保持一致，页面代码无需改动。
+const { syncPendingReminders } = require('./utils/subscribe');
+
 App({
-  onLaunch() {},
+  onLaunch() {
+    // 冷启动时尝试同步离线未发送的提醒任务
+    syncPendingReminders();
+
+    // 监听网络状态恢复，自动补偿同步
+    if (typeof wx !== 'undefined' && wx.onNetworkStatusChange) {
+      wx.onNetworkStatusChange((res) => {
+        if (res && res.isConnected) {
+          syncPendingReminders();
+        }
+      });
+    }
+  },
   globalData: {}
 });

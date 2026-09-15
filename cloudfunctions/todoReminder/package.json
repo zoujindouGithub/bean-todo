@@ -1,0 +1,9 @@
+{
+  "name": "todoReminder",
+  "version": "1.0.0",
+  "description": "豆芽待办定时提醒下发与撤销云函数",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

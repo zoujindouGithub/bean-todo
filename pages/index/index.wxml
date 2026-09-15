@@ -87,6 +87,9 @@
               <view class="due-dot" style="background: {{item.dueMeta.color}};"></view>
               <text class="due-text">{{item.dueMeta.label}}</text>
             </view>
+            <view wx:if="{{item.remind && item.dueDate && !item.completed}}" class="remind-badge">
+              <view class="remind-badge-icon"></view>
+            </view>
           </view>
         </view>
       </view>
@@ -169,6 +172,23 @@
             <view wx:if="{{newDueDate}}" class="picker-clear" catchtap="onClearNewDueDate"></view>
           </view>
         </picker>
+      </view>
+
+      <!-- 微信订阅消息提醒开关 (设置截止日期后展示) -->
+      <view class="drawer-remind-row" wx:if="{{newDueDate}}">
+        <view class="remind-left">
+          <view class="remind-icon"></view>
+          <view class="remind-texts">
+            <text class="remind-title">微信到期提醒</text>
+            <text class="remind-desc">截止日早晨 09:00 推送微信服务通知</text>
+          </view>
+        </view>
+        <switch
+          class="remind-switch"
+          color="#2f6fed"
+          checked="{{newRemind}}"
+          bindchange="onNewRemindChange"
+        />
       </view>
 
       <view class="drawer-actions">

@@ -664,3 +664,94 @@
   color: #ffffff;
   box-shadow: 0 6rpx 20rpx rgba(47, 111, 237, 0.28);
 }
+
+/* 卡片微型提醒徽标 */
+.remind-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38rpx;
+  height: 38rpx;
+  background: #f0f4ff;
+  border: 1rpx solid #dbe6fe;
+  border-radius: 10rpx;
+}
+.remind-badge-icon {
+  position: relative;
+  width: 16rpx;
+  height: 16rpx;
+  border: 2rpx solid #3b82f6;
+  border-top-left-radius: 8rpx;
+  border-top-right-radius: 8rpx;
+  border-bottom: none;
+  box-sizing: border-box;
+}
+.remind-badge-icon::after {
+  content: '';
+  position: absolute;
+  bottom: -4rpx;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20rpx;
+  height: 2rpx;
+  background: #3b82f6;
+}
+
+/* 抽屉内微信提醒开关行 */
+.drawer-remind-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16rpx 20rpx;
+  margin-bottom: 24rpx;
+  background: #f7f9fc;
+  border: 1rpx solid #e8edf5;
+  border-radius: 16rpx;
+}
+.remind-left {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  flex: 1;
+}
+.remind-icon {
+  position: relative;
+  width: 22rpx;
+  height: 22rpx;
+  border: 2.5rpx solid #2f6fed;
+  border-top-left-radius: 11rpx;
+  border-top-right-radius: 11rpx;
+  border-bottom: none;
+  box-sizing: border-box;
+  flex: none;
+}
+.remind-icon::after {
+  content: '';
+  position: absolute;
+  bottom: -5rpx;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 28rpx;
+  height: 2.5rpx;
+  background: #2f6fed;
+}
+.remind-texts {
+  display: flex;
+  flex-direction: column;
+  gap: 2rpx;
+}
+.remind-title {
+  font-size: 26rpx;
+  font-weight: 500;
+  color: #1f2937;
+  line-height: 1.2;
+}
+.remind-desc {
+  font-size: 20rpx;
+  color: #8c95a6;
+  line-height: 1.2;
+}
+.remind-switch {
+  transform: scale(0.76);
+  transform-origin: right center;
+}

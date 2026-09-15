@@ -1,6 +1,11 @@
 // pages/index/index.js
 const { TodoManager } = require('../../utils/todo');
 const { getDueStatus } = require('../../utils/date-helper');
+const {
+  requestSubscription,
+  scheduleReminder,
+  cancelReminder
+} = require('../../utils/subscribe');
 const todoManager = new TodoManager();
 
 const FILTERS = {
@@ -45,9 +50,17 @@ const PRIORITY_LABELS = { low: '低', normal: '中', high: '高' };
     newPriority: 'normal',
     newPriorityIndex: 1,
     newDueDate: '',
+    newRemind: false,
     priorities: PRIORITIES,
     priorityLabels: PRIORITY_LABELS,
     creating: false
+  },
+  onLoad(options) {
+    if (options && options.todoId) {
+      setTimeout(() => {
+        this.openEditDrawer(options.todoId);
+      }, 350);
+    }
   },
   onShow() {
     this.loadTodos();
@@ -137,12 +150,13 @@ const PRIORITY_LABELS = { low: '低', normal: '中', high: '高' };
     }
     // 2. 原位乐观更新：让用户立即看到对勾弹跳与文字划线，避免突兀瞬移
     const currentList = this.data.list || [];
-    const target = currentList.find((it) => it._id === id);
     if (target) {
       target.completed = !target.completed;
       this.setData({ list: this.decorate(currentList) });
+      if (target.completed) {
+        cancelReminder(id);
+      }
     }
-    // 3. 持久化并留出 0.24s 动效播放时间后刷新排序/过滤
     try {
       await todoManager.toggle(id);
       setTimeout(() => {
@@ -282,8 +296,8 @@ const PRIORITY_LABELS = { low: '低', normal: '中', high: '高' };
   async doRemove(id) {
     try {
       await todoManager.remove(id);
+      cancelReminder(id);
       wx.showToast({ title: '已删除', icon: 'success' });
-      this.loadTodos();
     } catch (err) {
       console.error('删除失败:', err);
       wx.showToast({ title: '删除失败', icon: 'none' });
@@ -307,6 +321,7 @@ const PRIORITY_LABELS = { low: '低', normal: '中', high: '高' };
       newPriority: 'normal',
       newPriorityIndex: 1,
       newDueDate: '',
+      newRemind: false,
       creating: false
     });
     // 动画就绪后自动唤起输入聚焦
@@ -338,6 +353,7 @@ const PRIORITY_LABELS = { low: '低', normal: '中', high: '高' };
       newPriority: item.priority || 'normal',
       newPriorityIndex: idx >= 0 ? idx : 1,
       newDueDate: item.dueDate || '',
+      newRemind: !!item.remind,
       editCompleted: !!item.completed,
       creating: false
     });
@@ -354,8 +370,10 @@ const PRIORITY_LABELS = { low: '低', normal: '中', high: '高' };
     }
     const nextCompleted = !editCompleted;
     this.setData({ editCompleted: nextCompleted });
+    if (nextCompleted) {
+      cancelReminder(editId);
+    }
     try {
-      await todoManager.toggle(editId);
       wx.showToast({
         title: nextCompleted ? '已标记为完成' : '已设为进行中',
         icon: 'success',
@@ -405,39 +423,62 @@ const PRIORITY_LABELS = { low: '低', normal: '中', high: '高' };
   },
 
   onClearNewDueDate() {
-    this.setData({ newDueDate: '' });
+    this.setData({ newDueDate: '', newRemind: false });
+  },
+
+  onNewRemindChange(e) {
+    this.setData({ newRemind: !!e.detail.value });
   },
 
   /**
    * 保存待办：根据 isDrawerEdit 自动分支为新增或更新
    */
   async onSaveCreate() {
-    const { newTitle, newDesc, newPriority, newDueDate, isDrawerEdit, editId, creating } = this.data;
+    const { newTitle, newDesc, newPriority, newDueDate, newRemind, isDrawerEdit, editId, creating } = this.data;
     if (creating) return;
     if (!newTitle || !newTitle.trim()) {
       wx.showToast({ title: '请输入待办标题', icon: 'none' });
       return;
     }
 
+    let shouldRemind = !!(newRemind && newDueDate);
+    if (shouldRemind) {
+      const subRes = await requestSubscription();
+      if (subRes.status === 'reject') {
+        wx.showToast({ title: '微信提醒未开启，待办已正常保存', icon: 'none' });
+        shouldRemind = false;
+      }
+    }
+
     this.setData({ creating: true });
     try {
+      let savedTodo;
       if (isDrawerEdit) {
-        await todoManager.update(editId, {
+        savedTodo = await todoManager.update(editId, {
           title: newTitle.trim(),
           desc: newDesc ? newDesc.trim() : '',
           priority: newPriority,
-          dueDate: newDueDate || ''
+          dueDate: newDueDate || '',
+          remind: shouldRemind
         });
         wx.showToast({ title: '已保存', icon: 'success' });
       } else {
-        await todoManager.create({
+        savedTodo = await todoManager.create({
           title: newTitle.trim(),
           desc: newDesc ? newDesc.trim() : '',
           priority: newPriority,
-          dueDate: newDueDate || ''
+          dueDate: newDueDate || '',
+          remind: shouldRemind
         });
         wx.showToast({ title: '已添加', icon: 'success' });
       }
+
+      if (shouldRemind && savedTodo) {
+        scheduleReminder(savedTodo);
+      } else if (isDrawerEdit && !shouldRemind) {
+        cancelReminder(editId);
+      }
+
       this.closeCreateDrawer();
       this.loadTodos();
     } catch (err) {
@@ -447,7 +488,6 @@ const PRIORITY_LABELS = { low: '低', normal: '中', high: '高' };
       this.setData({ creating: false });
     }
   },
-
   /**
    * 模态框中删除当前正在编辑的待办
    */
@@ -462,8 +502,8 @@ const PRIORITY_LABELS = { low: '低', normal: '中', high: '高' };
         if (res.confirm) {
           try {
             await todoManager.remove(editId);
+            cancelReminder(editId);
             wx.showToast({ title: '已删除', icon: 'success' });
-            this.closeCreateDrawer();
             this.loadTodos();
           } catch (err) {
             console.error('删除待办失败:', err);
