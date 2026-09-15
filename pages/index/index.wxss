@@ -63,16 +63,115 @@
   font-weight: 500;
 }
 
-/* 列表 */
+/* 列表与滑动单元格 */
 .list {}
+.swipe-cell {
+  position: relative;
+  border-radius: 16rpx;
+  margin-bottom: 20rpx;
+  overflow: hidden;
+  background: #f1f3f6;
+}
+
+/* 左滑操作抽屉 */
+.swipe-actions {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 280rpx;
+  display: flex;
+  align-items: stretch;
+  z-index: 1;
+}
+
+.swipe-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 24rpx;
+  font-weight: 500;
+  transition: opacity 0.15s;
+}
+.swipe-btn:active {
+  opacity: 0.85;
+}
+
+.swipe-btn--complete {
+  background: #10b981;
+}
+.swipe-btn--revert {
+  background: #3b82f6;
+}
+.swipe-btn--delete {
+  background: #ef4444;
+}
+
+.swipe-btn-icon {
+  position: relative;
+  width: 32rpx;
+  height: 32rpx;
+  margin-bottom: 6rpx;
+}
+.swipe-btn-icon--complete::after {
+  content: '';
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  width: 10rpx;
+  height: 20rpx;
+  border-bottom: 4rpx solid #ffffff;
+  border-right: 4rpx solid #ffffff;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+.swipe-btn-icon--delete::before {
+  content: '';
+  position: absolute;
+  top: 2rpx;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24rpx;
+  height: 4rpx;
+  background: #ffffff;
+  border-radius: 2rpx;
+}
+.swipe-btn-icon--delete::after {
+  content: '';
+  position: absolute;
+  top: 8rpx;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 18rpx;
+  height: 20rpx;
+  border: 3.5rpx solid #ffffff;
+  border-top: none;
+  border-radius: 0 0 4rpx 4rpx;
+  box-sizing: border-box;
+}
+
+.swipe-btn-text {
+  font-size: 24rpx;
+  line-height: 1;
+}
+
+/* 卡片上层内容主体 */
 .todo-card {
+  position: relative;
+  z-index: 2;
   display: flex;
   align-items: flex-start;
   background: #ffffff;
-  border-radius: 16rpx;
   padding: 28rpx 24rpx;
-  margin-bottom: 20rpx;
+  margin-bottom: 0;
   box-shadow: 0 4rpx 16rpx rgba(31, 35, 41, 0.04);
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+.todo-card--swiped {
+  transform: translateX(-280rpx);
 }
 .check-hitbox {
   margin: -16rpx 14rpx -16rpx -16rpx;

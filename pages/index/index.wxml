@@ -32,32 +32,61 @@
   <!-- 列表 -->
   <view class="list" wx:if="{{list.length > 0}}">
     <view
-      class="todo-card"
+      class="swipe-cell"
       wx:for="{{list}}"
       wx:key="_id"
-      data-id="{{item._id}}"
-      data-title="{{item.title}}"
-      bindtap="goEdit"
-      bindlongpress="onLongPressDelete"
     >
-      <view
-        class="check-hitbox"
-        catchtap="onToggle"
-        data-id="{{item._id}}"
-      >
-        <view class="check {{item.completed ? 'check--done' : ''}}"></view>
+      <!-- 左滑露出的操作抽屉 -->
+      <view class="swipe-actions">
+        <view
+          class="swipe-btn swipe-btn--complete {{item.completed ? 'swipe-btn--revert' : ''}}"
+          catchtap="onSwipeComplete"
+          data-id="{{item._id}}"
+        >
+          <view class="swipe-btn-icon swipe-btn-icon--complete"></view>
+          <text class="swipe-btn-text">{{item.completed ? '恢复' : '完成'}}</text>
+        </view>
+        <view
+          class="swipe-btn swipe-btn--delete"
+          catchtap="onSwipeDelete"
+          data-id="{{item._id}}"
+          data-title="{{item.title}}"
+        >
+          <view class="swipe-btn-icon swipe-btn-icon--delete"></view>
+          <text class="swipe-btn-text">删除</text>
+        </view>
       </view>
-      <view class="todo-body">
-        <view class="todo-title {{item.completed ? 'todo-title--done' : ''}}">{{item.title}}</view>
-        <view class="todo-meta">
-          <text class="tag" style="color: {{item.priorityColor}}; background: {{item.priorityBg}};">{{item.priorityLabel}}</text>
-          <view
-            wx:if="{{item.dueDate && item.dueMeta}}"
-            class="due-pill due-pill--{{item.dueMeta.type}}"
-            style="color: {{item.dueMeta.color}}; background: {{item.dueMeta.bg}};"
-          >
-            <view class="due-dot" style="background: {{item.dueMeta.color}};"></view>
-            <text class="due-text">{{item.dueMeta.label}}</text>
+
+      <!-- 卡片内容主体（向左滑动露出底层按钮） -->
+      <view
+        class="todo-card {{openedSwipeId === item._id ? 'todo-card--swiped' : ''}}"
+        data-id="{{item._id}}"
+        data-title="{{item.title}}"
+        bindtouchstart="onTouchStart"
+        bindtouchmove="onTouchMove"
+        bindtouchend="onTouchEnd"
+        bindtap="onCardTap"
+        bindlongpress="onLongPressDelete"
+      >
+        <view
+          class="check-hitbox"
+          catchtap="onToggle"
+          data-id="{{item._id}}"
+        >
+          <view class="check {{item.completed ? 'check--done' : ''}}"></view>
+        </view>
+        <view class="todo-body">
+          <view class="todo-title {{item.completed ? 'todo-title--done' : ''}}">{{item.title}}</view>
+          <view class="todo-meta">
+            <text class="tag" style="color: {{item.priorityColor}}; background: {{item.priorityBg}};">{{item.priorityLabel}}</text>
+            <view
+              wx:if="{{item.dueDate && item.dueMeta}}"
+              class="due-pill due-pill--{{item.dueMeta.type}}"
+              style="color: {{item.dueMeta.color}}; background: {{item.dueMeta.bg}};"
+            >
+              <view class="due-dot" style="background: {{item.dueMeta.color}};"></view>
+              <text class="due-text">{{item.dueMeta.label}}</text>
+            </view>
           </view>
         </view>
       </view>

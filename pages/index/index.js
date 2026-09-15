@@ -38,6 +38,7 @@ const PRIORITY_LABELS = { low: '低', normal: '中', high: '高' };
     isDrawerEdit: false,
     editId: '',
     editCompleted: false,
+    openedSwipeId: '',
     inputFocus: false,
     newTitle: '',
     newDesc: '',
@@ -82,6 +83,7 @@ const PRIORITY_LABELS = { low: '低', normal: '中', high: '高' };
       const completed = all.filter((it) => it.completed).length;
       this.setData({
         list: this.decorate(list),
+        openedSwipeId: '',
         stats: {
           total,
           active: total - completed,
@@ -120,7 +122,7 @@ const PRIORITY_LABELS = { low: '低', normal: '中', high: '高' };
   onSwitchFilter(e) {
     const key = e.currentTarget.dataset.key;
     if (key === this.data.activeFilter) return;
-    this.setData({ activeFilter: key }, () => this.loadTodos());
+    this.setData({ activeFilter: key, openedSwipeId: '' }, () => this.loadTodos());
   },
 
   /**
@@ -154,11 +156,99 @@ const PRIORITY_LABELS = { low: '低', normal: '中', high: '高' };
   },
 
   /**
-   * 长按卡片：确认删除。
+   * 卡片触摸手势处理（防纵向滚动误触与排他性展开）
    */
-  onLongPressDelete(e) {
+  onTouchStart(e) {
+    if (!e.touches || !e.touches[0]) return;
+    const touch = e.touches[0];
+    const id = e.currentTarget.dataset.id;
+    this._touch = {
+      startX: touch.clientX,
+      startY: touch.clientY,
+      id,
+      lockedDir: ''
+    };
+    // 如果已有其他卡片处于展开状态，触摸新卡片时立即复位
+    if (this.data.openedSwipeId && this.data.openedSwipeId !== id) {
+      this.setData({ openedSwipeId: '' });
+    }
+  },
+
+  onTouchMove(e) {
+    if (!this._touch || !this._touch.id || !e.touches || !e.touches[0]) return;
+    const touch = e.touches[0];
+    const deltaX = touch.clientX - this._touch.startX;
+    const deltaY = touch.clientY - this._touch.startY;
+
+    // 未锁定方向前做正交位移判定
+    if (!this._touch.lockedDir) {
+      if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 8) {
+        this._touch.lockedDir = 'vertical'; // 纵向滚动列表，放弃横滑拦截
+        return;
+      }
+      if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 8) {
+        this._touch.lockedDir = 'horizontal'; // 锁定横向手势
+      }
+    }
+  },
+
+  onTouchEnd(e) {
+    if (!this._touch || !this._touch.id || !e.changedTouches || !e.changedTouches[0]) {
+      this._touch = null;
+      return;
+    }
+    const touch = e.changedTouches[0];
+    const deltaX = touch.clientX - this._touch.startX;
+    const id = this._touch.id;
+    const isCurrentOpened = this.data.openedSwipeId === id;
+
+    if (this._touch.lockedDir === 'horizontal') {
+      // 左滑动量超过 50px：吸附展开
+      if (deltaX < -50) {
+        if (!isCurrentOpened) {
+          this.setData({ openedSwipeId: id });
+          if (typeof wx !== 'undefined' && wx.vibrateShort) {
+            wx.vibrateShort({ type: 'light' });
+          }
+        }
+      } else if (deltaX > 30) {
+        // 右滑动量超过 30px：吸附收回
+        if (isCurrentOpened) {
+          this.setData({ openedSwipeId: '' });
+        }
+      }
+    }
+    this._touch = null;
+  },
+
+  /**
+   * 点击卡片内容主体：已左滑展开时点击收回，未展开时打开编辑抽屉
+   */
+  onCardTap(e) {
+    const id = e.currentTarget.dataset.id;
+    if (this.data.openedSwipeId) {
+      this.setData({ openedSwipeId: '' });
+      return;
+    }
+    this.openEditDrawer(id);
+  },
+
+  /**
+   * 左滑操作：标记完成 / 恢复
+   */
+  async onSwipeComplete(e) {
+    const id = e.currentTarget.dataset.id;
+    this.setData({ openedSwipeId: '' });
+    await this.onToggle({ currentTarget: { dataset: { id } } });
+  },
+
+  /**
+   * 左滑操作：删除待办
+   */
+  onSwipeDelete(e) {
     const id = e.currentTarget.dataset.id;
     const title = e.currentTarget.dataset.title || '该待办';
+    this.setData({ openedSwipeId: '' });
     wx.showModal({
       title: '删除待办',
       content: `确定删除「${title}」吗？`,
@@ -171,6 +261,24 @@ const PRIORITY_LABELS = { low: '低', normal: '中', high: '高' };
     });
   },
 
+  /**
+   * 长按卡片：确认删除。
+   */
+  onLongPressDelete(e) {
+    const id = e.currentTarget.dataset.id;
+    const title = e.currentTarget.dataset.title || '该待办';
+    this.setData({ openedSwipeId: '' });
+    wx.showModal({
+      title: '删除待办',
+      content: `确定删除「${title}」吗？`,
+      confirmColor: '#e5484d',
+      success: (res) => {
+        if (res.confirm) {
+          this.doRemove(id);
+        }
+      }
+    });
+  },
   async doRemove(id) {
     try {
       await todoManager.remove(id);
