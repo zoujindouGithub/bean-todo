@@ -4,9 +4,9 @@
 
 const SUBSCRIBE_CONFIG = {
   // 订阅消息模板 ID (一次性订阅，类目推荐：工具 > 备忘录/便签，模板关键词包含：待办事项、提醒时间、温馨提示)
-  TEMPLATE_ID: '',
+  TEMPLATE_ID: 'KIcUAXh4fbWVGuyOwdkYtlzL8Dj0XIwVLMJKlDBfXbg',
 
-  // 微信云开发环境 ID (若使用云开发混合模式下发提醒)
+  // 微信云开发环境 ID (若使用云开发定时器下发服务通知，请在此填入云环境 ID)
   CLOUD_ENV_ID: '',
 
   // 默认提醒时间 (24小时制，固定为截止日早晨 09:00)
@@ -23,13 +23,22 @@ const SUBSCRIBE_CONFIG = {
 };
 
 /**
- * 校验订阅消息功能是否已正确配置
+ * 校验订阅消息模板是否已配置
  * @returns {boolean}
  */
 function isSubscribeConfigured() {
   return !!(
     SUBSCRIBE_CONFIG.TEMPLATE_ID &&
-    SUBSCRIBE_CONFIG.TEMPLATE_ID.trim() !== '' &&
+    SUBSCRIBE_CONFIG.TEMPLATE_ID.trim() !== ''
+  );
+}
+
+/**
+ * 校验微信云开发环境是否已配置
+ * @returns {boolean}
+ */
+function isCloudConfigured() {
+  return !!(
     SUBSCRIBE_CONFIG.CLOUD_ENV_ID &&
     SUBSCRIBE_CONFIG.CLOUD_ENV_ID.trim() !== ''
   );
@@ -37,5 +46,6 @@ function isSubscribeConfigured() {
 
 module.exports = {
   SUBSCRIBE_CONFIG,
-  isSubscribeConfigured
+  isSubscribeConfigured,
+  isCloudConfigured
 };

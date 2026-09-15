@@ -1,5 +1,5 @@
 // 豆芽待办 · 微信订阅消息客户端授权与轻量云端同步助手
-const { SUBSCRIBE_CONFIG, isSubscribeConfigured } = require('../config/subscribe');
+const { SUBSCRIBE_CONFIG, isSubscribeConfigured, isCloudConfigured } = require('../config/subscribe');
 
 const PENDING_STORAGE_KEY = 'bean_pending_reminders_v1';
 let isCloudInitialized = false;
@@ -9,8 +9,7 @@ let isCloudInitialized = false;
  */
 function ensureCloudInit() {
   if (isCloudInitialized) return true;
-  if (!isSubscribeConfigured()) return false;
-
+  if (!isCloudConfigured()) return false;
   try {
     if (typeof wx !== 'undefined' && wx.cloud) {
       wx.cloud.init({
@@ -141,8 +140,8 @@ async function scheduleReminder(todo) {
     return { success: false, reason: '缺少待办核心数据' };
   }
 
-  if (!isSubscribeConfigured() || !ensureCloudInit()) {
-    return { success: false, reason: '未配置云环境或模板ID' };
+  if (!isCloudConfigured() || !ensureCloudInit()) {
+    return { success: false, reason: '未配置云开发环境ID' };
   }
 
   try {
@@ -184,7 +183,7 @@ async function cancelReminder(todoId) {
   dequeuePending(todoId);
 
   // 2. 如果已配置云端，则静默发送取消请求
-  if (!isSubscribeConfigured() || !ensureCloudInit()) {
+  if (!isCloudConfigured() || !ensureCloudInit()) {
     return { success: true };
   }
 
@@ -208,8 +207,7 @@ async function cancelReminder(todoId) {
  * 处理离线待同步队列（联网或冷启动时补偿调用）
  */
 async function syncPendingReminders() {
-  if (!isSubscribeConfigured() || !ensureCloudInit()) return;
-  const queue = getPendingQueue();
+  if (!isCloudConfigured() || !ensureCloudInit()) return;
   if (queue.length === 0) return;
 
   console.info(`[Subscribe] 正在后台同步 ${queue.length} 条待重试的提醒任务...`);
@@ -236,6 +234,7 @@ async function syncPendingReminders() {
 
 module.exports = {
   isSubscribeConfigured,
+  isCloudConfigured,
   requestSubscription,
   scheduleReminder,
   cancelReminder,
