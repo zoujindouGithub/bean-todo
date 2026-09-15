@@ -76,7 +76,7 @@
     catchtouchmove="noop"
   >
     <view class="drawer-header">
-      <text class="drawer-title">新增待办</text>
+      <text class="drawer-title">{{isDrawerEdit ? '编辑待办' : '新增待办'}}</text>
       <view class="drawer-close" bindtap="closeCreateDrawer"></view>
     </view>
 
@@ -116,18 +116,25 @@
 
         <picker mode="date" value="{{newDueDate}}" bindchange="onNewDateChange">
           <view class="drawer-picker {{newDueDate ? 'drawer-picker--active' : ''}}">
-            <text class="picker-label">{{newDueDate ? newDueDate : '截止日'}}</text>
-            <text wx:if="{{newDueDate}}" class="picker-clear" catchtap="onClearNewDueDate">×</text>
+            <view class="picker-cal-icon"></view>
+            <text class="picker-label">{{newDueDate ? newDueDate : '截止日期'}}</text>
+            <view wx:if="{{newDueDate}}" class="picker-clear" catchtap="onClearNewDueDate"></view>
           </view>
         </picker>
       </view>
 
-      <button
-        class="drawer-submit-btn"
-        loading="{{creating}}"
-        disabled="{{creating}}"
-        bindtap="onSaveCreate"
-      >保存待办</button>
-    </view>
+      <view class="drawer-actions">
+        <button
+          wx:if="{{isDrawerEdit}}"
+          class="drawer-btn drawer-btn--danger"
+          bindtap="onDrawerDelete"
+        >删除</button>
+        <button
+          class="drawer-btn drawer-btn--primary {{isDrawerEdit ? '' : 'drawer-btn--full'}}"
+          loading="{{creating}}"
+          disabled="{{creating}}"
+          bindtap="onSaveCreate"
+        >{{isDrawerEdit ? '保存修改' : '保存待办'}}</button>
+      </view>
   </view>
 </view>

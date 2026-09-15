@@ -32,8 +32,10 @@ const PRIORITY_LABELS = { low: '低', normal: '中', high: '高' };
      // 统计：全部 / 进行中 / 已完成
      stats: { total: 0, active: 0, completed: 0 },
     loading: false,
-    // 快速新增半屏抽屉
+    // 快速新增/编辑半屏抽屉
     showCreateDrawer: false,
+    isDrawerEdit: false,
+    editId: '',
     inputFocus: false,
     newTitle: '',
     newDesc: '',
@@ -43,8 +45,7 @@ const PRIORITY_LABELS = { low: '低', normal: '中', high: '高' };
     priorities: PRIORITIES,
     priorityLabels: PRIORITY_LABELS,
     creating: false
-   },
-
+  },
   onShow() {
     this.loadTodos();
   },
@@ -169,6 +170,8 @@ const PRIORITY_LABELS = { low: '低', normal: '中', high: '高' };
   openCreateDrawer() {
     this.setData({
       showCreateDrawer: true,
+      isDrawerEdit: false,
+      editId: '',
       inputFocus: false,
       newTitle: '',
       newDesc: '',
@@ -183,6 +186,31 @@ const PRIORITY_LABELS = { low: '低', normal: '中', high: '高' };
         this.setData({ inputFocus: true });
       }
     }, 200);
+  },
+
+  /**
+   * 点击待办卡片：在半屏抽屉中打开编辑
+   */
+  async openEditDrawer(id) {
+    if (!id) return;
+    const item = this.data.list.find((it) => it._id === id) || (await todoManager.get(id));
+    if (!item) {
+      wx.showToast({ title: '待办不存在', icon: 'none' });
+      return;
+    }
+    const idx = PRIORITIES.indexOf(item.priority);
+    this.setData({
+      showCreateDrawer: true,
+      isDrawerEdit: true,
+      editId: id,
+      inputFocus: false,
+      newTitle: item.title || '',
+      newDesc: item.desc || '',
+      newPriority: item.priority || 'normal',
+      newPriorityIndex: idx >= 0 ? idx : 1,
+      newDueDate: item.dueDate || '',
+      creating: false
+    });
   },
 
   /**
@@ -225,10 +253,10 @@ const PRIORITY_LABELS = { low: '低', normal: '中', high: '高' };
   },
 
   /**
-   * 保存新增待办并刷新主页列表
+   * 保存待办：根据 isDrawerEdit 自动分支为新增或更新
    */
   async onSaveCreate() {
-    const { newTitle, newDesc, newPriority, newDueDate, creating } = this.data;
+    const { newTitle, newDesc, newPriority, newDueDate, isDrawerEdit, editId, creating } = this.data;
     if (creating) return;
     if (!newTitle || !newTitle.trim()) {
       wx.showToast({ title: '请输入待办标题', icon: 'none' });
@@ -237,31 +265,68 @@ const PRIORITY_LABELS = { low: '低', normal: '中', high: '高' };
 
     this.setData({ creating: true });
     try {
-      await todoManager.create({
-        title: newTitle.trim(),
-        desc: newDesc ? newDesc.trim() : '',
-        priority: newPriority,
-        dueDate: newDueDate || ''
-      });
-      wx.showToast({ title: '已添加', icon: 'success' });
+      if (isDrawerEdit) {
+        await todoManager.update(editId, {
+          title: newTitle.trim(),
+          desc: newDesc ? newDesc.trim() : '',
+          priority: newPriority,
+          dueDate: newDueDate || ''
+        });
+        wx.showToast({ title: '已保存', icon: 'success' });
+      } else {
+        await todoManager.create({
+          title: newTitle.trim(),
+          desc: newDesc ? newDesc.trim() : '',
+          priority: newPriority,
+          dueDate: newDueDate || ''
+        });
+        wx.showToast({ title: '已添加', icon: 'success' });
+      }
       this.closeCreateDrawer();
       this.loadTodos();
     } catch (err) {
-      console.error('新增待办失败:', err);
-      wx.showToast({ title: err.message || '添加失败', icon: 'none' });
+      console.error('保存待办失败:', err);
+      wx.showToast({ title: err.message || '保存失败', icon: 'none' });
     } finally {
       this.setData({ creating: false });
     }
   },
 
+  /**
+   * 模态框中删除当前正在编辑的待办
+   */
+  onDrawerDelete() {
+    const { editId, newTitle } = this.data;
+    if (!editId) return;
+    wx.showModal({
+      title: '删除待办',
+      content: `确定删除「${newTitle || '该待办'}」吗？`,
+      confirmColor: '#e5484d',
+      success: async (res) => {
+        if (res.confirm) {
+          try {
+            await todoManager.remove(editId);
+            wx.showToast({ title: '已删除', icon: 'success' });
+            this.closeCreateDrawer();
+            this.loadTodos();
+          } catch (err) {
+            console.error('删除待办失败:', err);
+            wx.showToast({ title: '删除失败', icon: 'none' });
+          }
+        }
+      }
+    });
+  },
+
   goCreate() {
     this.openCreateDrawer();
   },
+
   /**
-   * 点击卡片：跳转到编辑页。
+   * 点击待办卡片：在半屏抽屉中打开编辑
    */
   goEdit(e) {
     const id = e.currentTarget.dataset.id;
-    wx.navigateTo({ url: `/pages/edit/edit?id=${id}` });
+    this.openEditDrawer(id);
   }
 });
