@@ -51,10 +51,11 @@
    - 列表卡片支持指尖向左轻滑，平滑展开宽度为 $280\text{rpx}$ 的操作栏；
    - 内置翠绿「完成 / 恢复」按钮与警示红「删除」按钮；
    - 具备**手势正交防冲突判定**（不卡纵向滚动）与**排他性展开机制**（滑动新卡片自动复位旧卡片）。
-6. **微信订阅消息定时到期提醒（轻量云端协同 · 发完即焚）**
-   - 抽屉内设置截止日期后可开启「微信到期提醒」，保存时优雅拉起微信系统订阅授权；
-   - 到期日清晨 09:00 由云定时触发器下发服务通知卡片，点击直达对应待办半屏抽屉；
-   - 离线优先支持断网补偿重试队列，本地完成或删除时静默撤销云端任务；发送后立即物理删除云端记录，零数据滞留。
+6. **手机系统日历强提醒（100% 离线 · 零后端 · 锁屏响铃）**
+   - 深度集成微信小程序原生系统日历接口（`wx.addPhoneCalendar`），支持 iOS / Android 原生日历日程强提醒；
+   - 截止日早晨 09:00 准时触发**手机锁屏弹窗与震动响铃**，提醒效果远胜折叠的微信服务号；
+   - **终身零月租费、零云端依赖**：不需要开通每月付费的微信云开发，断网环境下依然离线可用；
+   - 亦向前兼容微信订阅消息轻量云端模式（可选配置）。
 7. **Per-Commit 代码质量预提交门禁系统**
    - 本地内置 6 道全自动门禁脚本（`scripts/quality-gate.js`）与 Git pre-commit 钩子：
      - `[1/6]` JS 语法静态扫描 (`node --check`)
@@ -91,14 +92,14 @@
 ├── utils/
 │   ├── todo.js                # TodoManager 数据访问层封装（单例、本地缓存 CRUD）
 │   ├── date-helper.js         # 日期紧迫度计算、状态分级与智能排序纯函数工具
+│   ├── calendar.js            # 手机系统日历强提醒助手（零费用、离线响铃）
 │   └── subscribe.js           # 微信订阅消息客户端授权与离线重试同步助手
-├── scripts/
 │   └── quality-gate.js        # 6 道代码质量预提交门禁脚本
 ├── tests/
 │   ├── datastore.test.js      # 本地数据存储与 CRUD 契约单测 (42 项断言)
 │   ├── smart-sort.test.js     # 紧迫度分级与 GTD 智能排序算法专项单测
+│   ├── calendar.test.js       # 手机系统日历助手专项单测
 │   └── subscribe.test.js      # 订阅消息与离线队列容错专项单测
-├── .githooks/
 │   └── pre-commit             # Git 提交前自动触发门禁的 Hook
 ├── LICENSE                    # MIT 开源许可证
 └── README.md                  # 本文档
@@ -182,10 +183,11 @@ Embracing a **zero-backend dependency** architecture, all user data is safely pe
    - Smooth left-swipe gesture reveals a $280\text{rpx}$ utility drawer.
    - Contains an emerald green **Complete / Revert** button and an alert red **Delete** button.
    - Features directional axis-locking to eliminate vertical scrolling interference, along with single-item exclusive expansion.
-6. **WeChat Scheduled Subscription Notification (Cloud Hybrid · Send & Purge)**
-   - Easily toggle WeChat reminders upon selecting a due date; seamlessly invokes system authorization upon save.
-   - Scheduled cloud timer triggers morning 09:00 notifications; tapping the notification card directly opens the specific task's bottom drawer.
-   - Offline-resilient with automatic retry queues and silent task cancellation upon completion or deletion; records are purged immediately after delivery for maximum privacy.
+6. **Phone System Calendar Strong Reminder (100% Offline · Zero-Backend · Lock-screen Alarm)**
+   - Deeply integrates the native `wx.addPhoneCalendar` API, creating real system calendar events with alarms across iOS and Android devices.
+   - Fires a **lock-screen alert and ringtone at 09:00 AM** on the task due date—far more prominent than folded service notifications.
+   - **100% Free & Zero Server Maintenance**: Completely eliminates recurring monthly cloud service fees, functioning reliably offline with complete data privacy.
+   - Backward-compatible with optional WeChat subscription message cloud dispatching.
 7. **Per-Commit 6-Stage Quality Gate**
    - Automated via `scripts/quality-gate.js` and `.githooks/pre-commit`:
      - `[1/6]` JS Syntax Static Verification (`node --check`)

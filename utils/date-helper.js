@@ -281,6 +281,7 @@ function sortTodoList(list, now = new Date()) {
 module.exports = {
   PRIORITY_ORDER,
   parseDateOnly,
+  toMidnight,
   getDueDiffDays,
   getDueStatus,
   sortTodoList

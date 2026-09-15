@@ -6,6 +6,7 @@ const {
   scheduleReminder,
   cancelReminder
 } = require('../../utils/subscribe');
+const { addTodoToPhoneCalendar } = require('../../utils/calendar');
 const todoManager = new TodoManager();
 
 const FILTERS = {
@@ -461,7 +462,7 @@ const PRIORITY_LABELS = { low: '低', normal: '中', high: '高' };
           dueDate: newDueDate || '',
           remind: shouldRemind
         });
-        wx.showToast({ title: '已保存', icon: 'success' });
+        // 提示交由后续日历联动或默认处理
       } else {
         savedTodo = await todoManager.create({
           title: newTitle.trim(),
@@ -470,9 +471,22 @@ const PRIORITY_LABELS = { low: '低', normal: '中', high: '高' };
           dueDate: newDueDate || '',
           remind: shouldRemind
         });
-        wx.showToast({ title: '已添加', icon: 'success' });
+        // 提示交由后续日历联动或默认处理
       }
 
+      // 系统日历强提醒联动
+      if (shouldRemind && savedTodo) {
+        const calRes = await addTodoToPhoneCalendar(savedTodo);
+        if (calRes.success) {
+          wx.showToast({ title: isDrawerEdit ? '已保存并加入日历' : '已添加并加入日历', icon: 'success' });
+        } else if (calRes.status === 'cancelled') {
+          wx.showToast({ title: '待办已保存(未授权日历)', icon: 'none' });
+        } else {
+          wx.showToast({ title: isDrawerEdit ? '已保存' : '已添加', icon: 'success' });
+        }
+      } else {
+        wx.showToast({ title: isDrawerEdit ? '已保存' : '已添加', icon: 'success' });
+      }
       if (shouldRemind && savedTodo) {
         scheduleReminder(savedTodo);
       } else if (isDrawerEdit && !shouldRemind) {

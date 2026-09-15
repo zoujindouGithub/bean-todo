@@ -174,13 +174,13 @@
         </picker>
       </view>
 
-      <!-- 微信订阅消息提醒开关 (设置截止日期后展示) -->
+      <!-- 手机系统日历强提醒开关 (设置截止日期后展示) -->
       <view class="drawer-remind-row" wx:if="{{newDueDate}}">
         <view class="remind-left">
           <view class="remind-icon"></view>
           <view class="remind-texts">
-            <text class="remind-title">微信到期提醒</text>
-            <text class="remind-desc">截止日早晨 09:00 推送微信服务通知</text>
+            <text class="remind-title">手机日历到期强提醒</text>
+            <text class="remind-desc">截止日早晨 09:00 手机锁屏弹窗与响铃</text>
           </view>
         </view>
         <switch
