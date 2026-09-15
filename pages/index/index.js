@@ -69,10 +69,12 @@ const PRIORITY_LABELS = { low: '低', normal: '中', high: '高' };
     if (this.data.loading) return;
     this.setData({ loading: true });
     try {
-      const [list, all] = await Promise.all([
+      const results = await Promise.all([
         todoManager.list(this.buildWhere(this.data.activeFilter)),
         todoManager.list({})
       ]);
+      const list = results[0];
+      const all = results[1];
       const total = all.length;
       const completed = all.filter((it) => it.completed).length;
       this.setData({
