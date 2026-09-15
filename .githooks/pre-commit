@@ -1,0 +1,13 @@
+#!/bin/sh
+# 豆芽待办小程序 —— Git 提交前质量门禁 (pre-commit hook)
+
+echo "[pre-commit] 正在执行代码质量门禁检查..."
+node scripts/quality-gate.js
+
+EXIT_CODE=$?
+if [ $EXIT_CODE -ne 0 ]; then
+  echo "[pre-commit] 代码质量门禁未通过，提交已终止。"
+  exit 1
+fi
+
+exit 0
