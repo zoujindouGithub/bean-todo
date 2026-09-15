@@ -5,9 +5,19 @@
       {
         "type": "folder",
         "value": "tests"
+      },
+      {
+        "type": "folder",
+        "value": ".zvec-grep"
       }
     ],
     "include": []
+  },
+  "watchOptions": {
+    "ignore": [
+      ".zvec-grep/**",
+      ".git/**"
+    ]
   },
   "setting": {
     "urlCheck": false,
