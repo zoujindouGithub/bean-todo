@@ -28,15 +28,15 @@ function computeCalendarTime(dueDateStr, now = new Date()) {
   const targetDate = new Date(parsedDate);
   targetDate.setHours(DEFAULT_REMINDER_HOUR, DEFAULT_REMINDER_MINUTE, 0, 0);
 
-  // 边缘场景：如果是今天截止，且当前本地时间已超过 09:00，则顺延至当前时间后 10 分钟提醒
-  const todayMidnight = toMidnight(now);
-  const isToday = parsedDate.getTime() === todayMidnight.getTime();
+  const nowSeconds = Math.floor(now.getTime() / 1000);
+  let startSeconds = Math.floor(targetDate.getTime() / 1000);
 
-  if (isToday && targetDate.getTime() <= now.getTime()) {
-    targetDate.setTime(now.getTime() + 10 * 60 * 1000);
+  // 健壮性防御：如果计算出的提醒时间早于或等于当前系统时间（如截止于今天且已过早晨9点，或误选了历史日期）
+  // 自动将提醒时间顺延至当前时间后 10 分钟，确保 iOS / Android 系统日历不会因过去时间而拒绝写入
+  if (startSeconds <= nowSeconds) {
+    startSeconds = nowSeconds + 600; // 顺延 10 分钟 (600秒)
   }
 
-  const startSeconds = Math.floor(targetDate.getTime() / 1000);
   const endSeconds = startSeconds + DURATION_SECONDS;
 
   return {
@@ -46,7 +46,7 @@ function computeCalendarTime(dueDateStr, now = new Date()) {
 }
 
 /**
- * 将待办事项添加到手机系统日历 (支持 iOS / Android 原生日历提醒)
+ * 将待办事项添加到手机系统日历 (支持 iOS / Android 原生日历日程强提醒)
  * @param {Object} todo - 待办对象
  * @param {string} todo.title - 待办标题
  * @param {string} [todo.desc] - 待办描述
@@ -90,17 +90,36 @@ async function addTodoToPhoneCalendar(todo) {
         resolve({ success: true, status: 'ok', res });
       },
       fail(err) {
-        console.warn('[Calendar] 写入手机系统日历被取消或失败:', err);
-        const isCancel = err && (
-          err.errMsg?.includes('cancel') ||
-          err.errMsg?.includes('deny') ||
-          err.errMsg?.includes('auth')
-        );
-        resolve({
-          success: false,
-          status: isCancel ? 'cancelled' : 'fail',
-          error: err
-        });
+        console.warn('[Calendar] 写入手机系统日历失败:', err);
+        const errMsg = (err && err.errMsg) ? String(err.errMsg) : '';
+
+        // 1. 如果是权限被拒绝 (auth denied / authorize:fail)，弹窗引导用户前往设置开启
+        if (errMsg.includes('auth denied') || errMsg.includes('authorize:fail')) {
+          if (wx.showModal) {
+            wx.showModal({
+              title: '需要日历权限',
+              content: '添加手机日历强提醒需要开启日历读写权限。是否前往设置开启？',
+              confirmText: '去设置',
+              confirmColor: '#2f6fed',
+              success(modalRes) {
+                if (modalRes.confirm && wx.openSetting) {
+                  wx.openSetting();
+                }
+              }
+            });
+          }
+          resolve({ success: false, status: 'denied', error: err });
+          return;
+        }
+
+        // 2. 如果是用户主动点击系统日历弹窗的取消/拒绝
+        if (errMsg.includes('cancel')) {
+          resolve({ success: false, status: 'cancelled', error: err });
+          return;
+        }
+
+        // 3. 其他未知异常
+        resolve({ success: false, status: 'fail', error: err });
       }
     });
   });

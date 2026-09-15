@@ -94,4 +94,25 @@ test('addTodoToPhoneCalendar 接口包装与调用契约测试', async (t) => {
     assert.equal(res.success, false);
     assert.equal(res.status, 'cancelled');
   });
+
+  await t.test('系统权限被拒时应标记 denied 并尝试弹窗引导', async () => {
+    let showModalCalled = false;
+    global.wx = {
+      addPhoneCalendar(options) {
+        options.fail({ errMsg: 'addPhoneCalendar:fail auth denied' });
+      },
+      showModal(options) {
+        showModalCalled = true;
+      }
+    };
+
+    const res = await addTodoToPhoneCalendar({
+      title: '买牛奶',
+      dueDate: '2026-09-26'
+    });
+
+    assert.equal(res.success, false);
+    assert.equal(res.status, 'denied');
+    assert.equal(showModalCalled, true);
+  });
 });
