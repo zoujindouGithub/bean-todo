@@ -51,7 +51,11 @@
    - 列表卡片支持指尖向左轻滑，平滑展开宽度为 $280\text{rpx}$ 的操作栏；
    - 内置翠绿「完成 / 恢复」按钮与警示红「删除」按钮；
    - 具备**手势正交防冲突判定**（不卡纵向滚动）与**排他性展开机制**（滑动新卡片自动复位旧卡片）。
-6. **Per-Commit 代码质量预提交门禁系统**
+6. **微信订阅消息定时到期提醒（轻量云端协同 · 发完即焚）**
+   - 抽屉内设置截止日期后可开启「微信到期提醒」，保存时优雅拉起微信系统订阅授权；
+   - 到期日清晨 09:00 由云定时触发器下发服务通知卡片，点击直达对应待办半屏抽屉；
+   - 离线优先支持断网补偿重试队列，本地完成或删除时静默撤销云端任务；发送后立即物理删除云端记录，零数据滞留。
+7. **Per-Commit 代码质量预提交门禁系统**
    - 本地内置 6 道全自动门禁脚本（`scripts/quality-gate.js`）与 Git pre-commit 钩子：
      - `[1/6]` JS 语法静态扫描 (`node --check`)
      - `[2/6]` 全量 JSON 配置文件有效性校验
@@ -66,12 +70,17 @@
 
 ```
 .
-├── app.js                     # 小程序全局生命周期（纯本地版无需云初始化）
+├── app.js                     # 小程序全局生命周期与断网重试监听
 ├── app.json                   # 小程序全局页面路由与窗口配置（开启 lazyCodeLoading）
 ├── app.wxss                   # 全局基础样式与调色板变量
 ├── project.config.json        # 微信开发者工具工程配置（已配置打包/监听过滤）
 ├── project.miniapp.json       # 多端框架配置
 ├── sitemap.json               # 微信索引规则
+├── config/                    # 配置文件（模板 ID、云环境解耦配置）
+│   ├── subscribe.js
+│   └── subscribe.example.js
+├── cloudfunctions/           # 轻量云函数（免后端服务器）
+│   └── todoReminder/          # 定时下发与发完即焚云函数
 ├── pages/
 │   ├── index/                 # 主页：待办列表、左滑抽屉、半屏编辑模态框
 │   │   ├── index.js
@@ -81,12 +90,14 @@
 │   └── edit/                  # 独立全屏编辑备用页（历史兼容）
 ├── utils/
 │   ├── todo.js                # TodoManager 数据访问层封装（单例、本地缓存 CRUD）
-│   └── date-helper.js         # 日期紧迫度计算、状态分级与智能排序纯函数工具
+│   ├── date-helper.js         # 日期紧迫度计算、状态分级与智能排序纯函数工具
+│   └── subscribe.js           # 微信订阅消息客户端授权与离线重试同步助手
 ├── scripts/
 │   └── quality-gate.js        # 6 道代码质量预提交门禁脚本
 ├── tests/
 │   ├── datastore.test.js      # 本地数据存储与 CRUD 契约单测 (42 项断言)
-│   └── smart-sort.test.js     # 紧迫度分级与 GTD 智能排序算法专项单测
+│   ├── smart-sort.test.js     # 紧迫度分级与 GTD 智能排序算法专项单测
+│   └── subscribe.test.js      # 订阅消息与离线队列容错专项单测
 ├── .githooks/
 │   └── pre-commit             # Git 提交前自动触发门禁的 Hook
 ├── LICENSE                    # MIT 开源许可证
@@ -171,13 +182,17 @@ Embracing a **zero-backend dependency** architecture, all user data is safely pe
    - Smooth left-swipe gesture reveals a $280\text{rpx}$ utility drawer.
    - Contains an emerald green **Complete / Revert** button and an alert red **Delete** button.
    - Features directional axis-locking to eliminate vertical scrolling interference, along with single-item exclusive expansion.
-6. **Per-Commit 6-Stage Quality Gate**
+6. **WeChat Scheduled Subscription Notification (Cloud Hybrid · Send & Purge)**
+   - Easily toggle WeChat reminders upon selecting a due date; seamlessly invokes system authorization upon save.
+   - Scheduled cloud timer triggers morning 09:00 notifications; tapping the notification card directly opens the specific task's bottom drawer.
+   - Offline-resilient with automatic retry queues and silent task cancellation upon completion or deletion; records are purged immediately after delivery for maximum privacy.
+7. **Per-Commit 6-Stage Quality Gate**
    - Automated via `scripts/quality-gate.js` and `.githooks/pre-commit`:
      - `[1/6]` JS Syntax Static Verification (`node --check`)
      - `[2/6]` Comprehensive JSON Configuration Validation
      - `[3/6]` **WXML Tag Pairing & Closure Verification** (prevents missing `</view>` compile breaks)
      - `[4/6]` Mini-Program App Configuration Sanity Check
-     - `[5/6]` Full Data-Layer & GTD Sorting Unit Test Suites
+     - `[5/6]` Full Data-Layer, GTD Sorting & Subscription Unit Test Suites
      - `[6/6]` Bundle Single-File Size Ceiling ($\le 200\text{KB}$)
 
 ---
@@ -192,9 +207,13 @@ Embracing a **zero-backend dependency** architecture, all user data is safely pe
 ├── project.config.json        # WeChat DevTools project configuration
 ├── project.miniapp.json       # Multi-platform framework configuration
 ├── sitemap.json               # Search indexing rules
+├── config/                    # Configuration modules
+│   ├── subscribe.js
+│   └── subscribe.example.js
+├── cloudfunctions/           # Lightweight cloud functions
+│   └── todoReminder/          # Scheduled notification cloud function
 ├── pages/
 │   ├── index/                 # Main page: task list, swipe cells, bottom-sheet modal
-│   │   ├── index.js
 │   │   ├── index.json
 │   │   ├── index.wxml
 │   │   └── index.wxss
