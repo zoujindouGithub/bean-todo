@@ -13,6 +13,14 @@
       {
         "type": "folder",
         "value": "assets"
+      },
+      {
+        "type": "folder",
+        "value": "scripts"
+      },
+      {
+        "type": "folder",
+        "value": ".githooks"
       }
     ],
     "include": []
@@ -20,7 +28,9 @@
   "watchOptions": {
     "ignore": [
       ".zvec-grep/**",
-      ".git/**"
+      ".git/**",
+      "scripts/**",
+      ".githooks/**"
     ]
   },
   "setting": {

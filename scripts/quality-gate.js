@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /**
  * scripts/quality-gate.js
  * 豆芽待办小程序 —— 代码提交前质量门禁 (Per-Commit Quality Gate)
@@ -180,10 +179,10 @@ try {
     .filter((it) => it.type === 'folder')
     .map((it) => it.value);
 
-  const mustIgnore = ['tests', 'assets', '.zvec-grep'];
+  const mustIgnore = ['tests', 'assets', '.zvec-grep', 'scripts', '.githooks'];
   const missingIgnores = mustIgnore.filter((it) => !ignoredFolders.includes(it));
   if (missingIgnores.length === 0) {
-    pass('project.config.json 打包忽略规则已覆盖非生产资源 (tests, assets, .zvec-grep)');
+    pass('project.config.json 打包忽略规则已覆盖非生产资源 (tests, assets, .zvec-grep, scripts, .githooks)');
   } else {
     fail('project.config.json 打包忽略项不全', `缺少忽略目录: ${missingIgnores.join(', ')}`);
   }

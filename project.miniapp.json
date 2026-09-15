@@ -1,7 +1,7 @@
 {
   "miniVersion": "v2",
-  "name": "%name%",
-  "version": "0.0.1",
+  "name": "豆芽待办",
+  "version": "0.1.0",
   "versionCode": 100,
   "i18nFilePath": "i18n",
   "mini-ohos": {
