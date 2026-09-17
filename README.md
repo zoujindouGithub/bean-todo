@@ -51,11 +51,15 @@
    - 列表卡片支持指尖向左轻滑，平滑展开宽度为 $280\text{rpx}$ 的操作栏；
    - 内置翠绿「完成 / 恢复」按钮与警示红「删除」按钮；
    - 具备**手势正交防冲突判定**（不卡纵向滚动）与**排他性展开机制**（滑动新卡片自动复位旧卡片）。
-6. **手机系统日历强提醒（100% 离线 · 零后端 · 锁屏响铃）**
-   - 深度集成微信小程序原生系统日历接口（`wx.addPhoneCalendar`），支持 iOS / Android 原生日历日程强提醒；
-   - 截止日早晨 09:00 准时触发**手机锁屏弹窗与震动响铃**，提醒效果远胜折叠的微信服务号；
-   - **终身零月租费、零云端依赖**：不需要开通每月付费的微信云开发，断网环境下依然离线可用；
-   - 亦向前兼容微信订阅消息轻量云端模式（可选配置）。
+6. **手机系统日历强提醒与防重机制（无需云端提醒服务）**
+   - 保存待办时可通过 `wx.addPhoneCalendar` 添加系统日程，并请求到时提醒；不申请微信订阅消息。
+   - 默认使用设备本地时间的截止日 09:00；若已过该时间，顺延至当前时间十分钟后。
+   - **TAP 手势失效彻底解决**：用户开启日历开关时立即前置触发微信官方隐私保护授权弹窗（利用开关自身的 TAP 手势），避免保存时隐私弹窗打断微信对 `wx.addPhoneCalendar` 的直接手势约束（彻底规避 `can only be invoked by user TAP gesture` 报错）；授权被拒时自动回退开关并轻提示。
+   - **清晰状态标记与防重保护**：
+     - 待办列表卡片配备浅蓝底高对比度「已加日历」胶囊徽标，状态一目了然；
+     - 编辑抽屉展示专属「已添加到手机日历」绿色状态条与系统日历操作指引；
+     - 编辑时开关文案智能变更为「再次添加到手机日历」且默认关闭；若用户主动开启，强制弹出二次确认弹窗防误触与重复创建。
+   - 日历添加失败不影响本地待办保存；手势丢失时给出贴心重试引导，不再向用户抛出晦涩英文报错。已有日程的修改或删除需在系统日历操作。
 7. **Per-Commit 代码质量预提交门禁系统**
    - 本地内置 6 道全自动门禁脚本（`scripts/quality-gate.js`）与 Git pre-commit 钩子：
      - `[1/6]` JS 语法静态扫描 (`node --check`)
@@ -118,6 +122,18 @@
    - 点击「**编译**」，左侧模拟器即可秒级呈现并完整体验全部待办管理功能。
 
 ---
+### 手机日历真机验证
+
+1. 在微信公众平台的用户隐私保护指引中声明日历写入用途。官方文档说明新增声明约 **5 分钟**后生效；这不等于用户已授权。
+2. 重新上传修改后的代码并设为体验版，在手机微信中打开。开发者工具和 Node 测试不能证明系统日历实际写入。
+3. 新建一条明天截止的待办，打开「保存时添加到手机日历」（此时将利用点击 switch 的合法 TAP 手势前置拉起微信隐私授权弹窗，点击同意即可成功预授权），点击保存待办。
+4. 以「已保存并加入日历」提示、列表卡片出现「已加日历」蓝色胶囊徽标，以及系统日历中对应日期 **09:00** 的「待办提醒：标题」事件为写入成功判据。
+5. 再次点击卡片进入编辑抽屉，可看到专属「已添加到手机日历」状态卡片，开关显示为「再次添加到手机日历」（默认关闭）。尝试打开开关时将弹出二次确认弹窗，确认后才允许再次添加，杜绝误触重复创建。
+6. 若失败，待办仍保留：拒绝授权、不支持日历、手势丢失（提示再次点击保存即可加入）、后台声明未生效及系统错误会分别提示。不要通过反复保存猜测是否成功。
+
+日历是单次添加，不与待办双向同步：在小程序完成、删除或改期，**不会自动改动手机日历中的既有事件**。需要再次添加时请显式打开开关，并在系统日历管理旧事件。添加后的日程也可能按手机的日历账户设置同步到 iCloud 等服务。
+参考：[日历 API](https://developers.weixin.qq.com/miniprogram/dev/api/device/calendar/wx.addPhoneCalendar.html) · [隐私协议开发指南](https://developers.weixin.qq.com/miniprogram/dev/framework/user-privacy/PrivacyAuthorize.html)
+
 
 ### 🧪 本地测试与代码门禁运行
 
@@ -125,7 +141,7 @@
 
 ```bash
 # 运行全部单元测试
-node --test tests/datastore.test.js tests/smart-sort.test.js
+node --test tests/datastore.test.js tests/smart-sort.test.js tests/subscribe.test.js tests/calendar.test.js tests/index-calendar.test.js
 
 # 运行 6 道全量代码质量门禁
 node scripts/quality-gate.js
@@ -183,11 +199,11 @@ Embracing a **zero-backend dependency** architecture, all user data is safely pe
    - Smooth left-swipe gesture reveals a $280\text{rpx}$ utility drawer.
    - Contains an emerald green **Complete / Revert** button and an alert red **Delete** button.
    - Features directional axis-locking to eliminate vertical scrolling interference, along with single-item exclusive expansion.
-6. **Phone System Calendar Strong Reminder (100% Offline · Zero-Backend · Lock-screen Alarm)**
-   - Deeply integrates the native `wx.addPhoneCalendar` API, creating real system calendar events with alarms across iOS and Android devices.
-   - Fires a **lock-screen alert and ringtone at 09:00 AM** on the task due date—far more prominent than folded service notifications.
-   - **100% Free & Zero Server Maintenance**: Completely eliminates recurring monthly cloud service fees, functioning reliably offline with complete data privacy.
-   - Backward-compatible with optional WeChat subscription message cloud dispatching.
+6. **Phone Calendar Reminders (No Cloud Reminder Service Required)**
+   - On save, `wx.addPhoneCalendar` creates a system calendar event with an alarm request; it does not request WeChat subscription messages.
+   - Events start at 09:00 on the due date in the device's local timezone. If that time has passed, the reminder is scheduled ten minutes from now.
+   - Privacy consent and calendar write permission are required. Actual notifications, sound and vibration depend on calendar settings, notification permissions and Do Not Disturb; a ringing alarm is not guaranteed.
+   - Calendar failures do not discard local tasks. Editing does not add another event unless explicitly requested. Existing calendar events must be edited or deleted in the calendar app.
 7. **Per-Commit 6-Stage Quality Gate**
    - Automated via `scripts/quality-gate.js` and `.githooks/pre-commit`:
      - `[1/6]` JS Syntax Static Verification (`node --check`)
@@ -246,6 +262,18 @@ Embracing a **zero-backend dependency** architecture, all user data is safely pe
 3. **Compile & Preview**:
    - Click **Compile (编译)**. The simulator will instantly launch with full offline functionality.
 
+### Calendar Verification on a Phone
+
+1. Declare calendar write access in the mini-program's privacy guidelines. The official documentation states that new declarations take about **five minutes** to become effective; this does not grant user consent.
+2. Upload the updated code as a trial version and open it in WeChat on a phone. DevTools and Node tests cannot verify a real device's calendar.
+3. Create a task due tomorrow, enable the calendar option, and save. Grant privacy consent and calendar permission when prompted; existing grants may skip these prompts.
+4. Confirm both the calendar-success message and the event named `待办提醒：<title>` at **09:00** in the phone calendar.
+5. A failure leaves the local task intact and reports the calendar error separately. Keep any original error shown in the failure dialog rather than repeatedly saving.
+
+This is a one-time calendar export, not two-way synchronization. Completing, deleting or rescheduling a task does **not** update existing calendar events. Manage them in the calendar app. Calendar accounts may sync exported events to services such as iCloud.
+
+References: [Calendar API](https://developers.weixin.qq.com/miniprogram/dev/api/device/calendar/wx.addPhoneCalendar.html) · [Privacy authorization guide](https://developers.weixin.qq.com/miniprogram/dev/framework/user-privacy/PrivacyAuthorize.html)
+
 ---
 
 ### 🧪 Running Tests & Quality Gate
@@ -254,7 +282,7 @@ Run the zero-dependency test suites directly using Node.js built-in test runner:
 
 ```bash
 # Run all unit tests
-node --test tests/datastore.test.js tests/smart-sort.test.js
+node --test tests/datastore.test.js tests/smart-sort.test.js tests/subscribe.test.js tests/calendar.test.js tests/index-calendar.test.js
 
 # Execute all 6 stages of the quality gate
 node scripts/quality-gate.js

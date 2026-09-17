@@ -38,6 +38,7 @@ const PRIORITY_LABELS = { low: '低', normal: '中', high: '高' };
     // 快速新增/编辑半屏抽屉
     showCreateDrawer: false,
     isDrawerEdit: false,
+    isCalendarAdded: false,
     editId: '',
     editCompleted: false,
     openedSwipeId: '',
@@ -65,6 +66,13 @@ const PRIORITY_LABELS = { low: '低', normal: '中', high: '高' };
 
   onPullDownRefresh() {
     this.loadTodos().then(() => wx.stopPullDownRefresh());
+  },
+
+  onUnload() {
+    if (this._toggleTimer) {
+      clearTimeout(this._toggleTimer);
+      this._toggleTimer = null;
+    }
   },
 
   /**
@@ -147,6 +155,7 @@ const PRIORITY_LABELS = { low: '低', normal: '中', high: '高' };
     }
     // 2. 原位乐观更新：让用户立即看到对勾弹跳与文字划线，避免突兀瞬移
     const currentList = this.data.list || [];
+    const target = currentList.find((it) => it._id === id);
     if (target) {
       target.completed = !target.completed;
       this.setData({ list: this.decorate(currentList) });
@@ -156,8 +165,10 @@ const PRIORITY_LABELS = { low: '低', normal: '中', high: '高' };
     }
     try {
       await todoManager.toggle(id);
-      setTimeout(() => {
-        this.loadTodos();
+      this._toggleTimer = setTimeout(() => {
+        if (typeof wx !== 'undefined') {
+          this.loadTodos();
+        }
       }, 240);
     } catch (err) {
       console.error('切换状态失败:', err);
@@ -308,9 +319,12 @@ const PRIORITY_LABELS = { low: '低', normal: '中', high: '高' };
    * 打开快速新增半屏抽屉
    */
   openCreateDrawer() {
+    // 授权等待期间保留当前表单，防止旧保存结果关闭或覆盖新输入。
+    if (this.data.creating) return;
     this.setData({
       showCreateDrawer: true,
       isDrawerEdit: false,
+      isCalendarAdded: false,
       editId: '',
       inputFocus: false,
       newTitle: '',
@@ -333,8 +347,9 @@ const PRIORITY_LABELS = { low: '低', normal: '中', high: '高' };
    * 点击待办卡片：在半屏抽屉中打开编辑
    */
   async openEditDrawer(id) {
-    if (!id) return;
+    if (!id || this.data.creating) return;
     const item = this.data.list.find((it) => it._id === id) || (await todoManager.get(id));
+    if (this.data.creating) return;
     if (!item) {
       wx.showToast({ title: '待办不存在', icon: 'none' });
       return;
@@ -343,6 +358,7 @@ const PRIORITY_LABELS = { low: '低', normal: '中', high: '高' };
     this.setData({
       showCreateDrawer: true,
       isDrawerEdit: true,
+      isCalendarAdded: !!item.remind,
       editId: id,
       inputFocus: false,
       newTitle: item.title || '',
@@ -350,7 +366,8 @@ const PRIORITY_LABELS = { low: '低', normal: '中', high: '高' };
       newPriority: item.priority || 'normal',
       newPriorityIndex: idx >= 0 ? idx : 1,
       newDueDate: item.dueDate || '',
-      newRemind: !!item.remind,
+      // 系统日历只支持新增；普通编辑不能再次写入同一日程。
+      newRemind: false,
       editCompleted: !!item.completed,
       creating: false
     });
@@ -360,6 +377,7 @@ const PRIORITY_LABELS = { low: '低', normal: '中', high: '高' };
    * 抽屉顶栏完成状态切换
    */
   async onToggleDrawerComplete() {
+    if (this.data.creating) return;
     const { editId, editCompleted } = this.data;
     if (!editId) return;
     if (typeof wx !== 'undefined' && wx.vibrateShort) {
@@ -367,16 +385,17 @@ const PRIORITY_LABELS = { low: '低', normal: '中', high: '高' };
     }
     const nextCompleted = !editCompleted;
     this.setData({ editCompleted: nextCompleted });
-    if (nextCompleted) {
-      cancelReminder(editId);
-    }
     try {
+      await todoManager.toggle(editId);
+      if (nextCompleted) {
+        cancelReminder(editId);
+      }
       wx.showToast({
         title: nextCompleted ? '已标记为完成' : '已设为进行中',
         icon: 'success',
         duration: 1500
       });
-      this.loadTodos();
+      await this.loadTodos();
     } catch (err) {
       console.error('抽屉内切换完成状态失败:', err);
       this.setData({ editCompleted });
@@ -388,6 +407,7 @@ const PRIORITY_LABELS = { low: '低', normal: '中', high: '高' };
    * 关闭快速新增半屏抽屉
    */
   closeCreateDrawer() {
+    if (this.data.creating) return;
     this.setData({
       showCreateDrawer: false,
       inputFocus: false
@@ -400,14 +420,17 @@ const PRIORITY_LABELS = { low: '低', normal: '中', high: '高' };
   noop() {},
 
   onNewTitleInput(e) {
+    if (this.data.creating) return;
     this.setData({ newTitle: e.detail.value });
   },
 
   onNewDescInput(e) {
+    if (this.data.creating) return;
     this.setData({ newDesc: e.detail.value });
   },
 
   onNewPriorityTap(e) {
+    if (this.data.creating) return;
     const idx = Number(e.currentTarget.dataset.index);
     this.setData({
       newPriorityIndex: idx,
@@ -416,15 +439,62 @@ const PRIORITY_LABELS = { low: '低', normal: '中', high: '高' };
   },
 
   onNewDateChange(e) {
+    if (this.data.creating) return;
     this.setData({ newDueDate: e.detail.value });
   },
 
   onClearNewDueDate() {
+    if (this.data.creating) return;
     this.setData({ newDueDate: '', newRemind: false });
   },
 
   onNewRemindChange(e) {
-    this.setData({ newRemind: !!e.detail.value });
+    if (this.data.creating) return;
+    const value = !!(e && e.detail && e.detail.value);
+    if (!value) {
+      this.setData({ newRemind: false });
+      return;
+    }
+
+    const triggerPrivacyAuthorize = () => {
+      if (typeof wx !== 'undefined' && typeof wx.requirePrivacyAuthorize === 'function') {
+        wx.requirePrivacyAuthorize({
+          success: () => {
+            // 隐私已授权，保持开启
+          },
+          fail: () => {
+            this.setData({ newRemind: false });
+            if (typeof wx !== 'undefined' && typeof wx.showToast === 'function') {
+              wx.showToast({ title: '需要同意隐私保护指引才能使用日历', icon: 'none' });
+            }
+          }
+        });
+      }
+    };
+
+    if (this.data.isDrawerEdit && this.data.isCalendarAdded) {
+      if (typeof wx !== 'undefined' && typeof wx.showModal === 'function') {
+        wx.showModal({
+          title: '重复添加提醒',
+          content: '该待办已在手机日历中有日程。再次添加将在日历中创建新日程（旧日程不会自动删除）。是否确认再次添加？',
+          success: (res) => {
+            if (res.confirm) {
+              this.setData({ newRemind: true });
+              triggerPrivacyAuthorize();
+            } else {
+              this.setData({ newRemind: false });
+            }
+          },
+          fail: () => {
+            this.setData({ newRemind: false });
+          }
+        });
+        return;
+      }
+    }
+
+    this.setData({ newRemind: true });
+    triggerPrivacyAuthorize();
   },
 
   /**
@@ -438,71 +508,94 @@ const PRIORITY_LABELS = { low: '低', normal: '中', high: '高' };
       return;
     }
     const shouldRemind = !!(newRemind && newDueDate);
+    const payload = {
+      title: newTitle.trim(),
+      desc: newDesc ? newDesc.trim() : '',
+      priority: newPriority,
+      dueDate: newDueDate || ''
+    };
 
+    let shouldClose = false;
     this.setData({ creating: true });
     try {
-      let savedTodo;
+      let savedId = editId;
       if (isDrawerEdit) {
-        savedTodo = await todoManager.update(editId, {
-          title: newTitle.trim(),
-          desc: newDesc ? newDesc.trim() : '',
-          priority: newPriority,
-          dueDate: newDueDate || '',
-          remind: shouldRemind
-        });
+        await todoManager.update(editId, payload);
       } else {
-        savedTodo = await todoManager.create({
-          title: newTitle.trim(),
-          desc: newDesc ? newDesc.trim() : '',
-          priority: newPriority,
-          dueDate: newDueDate || '',
-          remind: shouldRemind
-        });
+        savedId = await todoManager.create(payload);
       }
 
-      this.closeCreateDrawer();
-      this.loadTodos();
-
-      // 手机系统日历强提醒联动 (纯前端原生直连，零微信消息弹窗干扰)
-      if (shouldRemind && savedTodo) {
-        const calRes = await addTodoToPhoneCalendar(savedTodo);
+      if (shouldRemind) {
+        // create 返回 ID、update 返回更新计数；日历需要的是完整的表单内容。
+        // 本地落盘在先，权限拒绝或日历失败不能丢失用户输入。
+        const calRes = await addTodoToPhoneCalendar(payload);
         if (calRes.success) {
-          wx.showToast({
-            title: isDrawerEdit ? '已保存并加入日历' : '已添加并加入日历',
-            icon: 'success',
-            duration: 2000
-          });
-        } else if (calRes.status === 'cancelled') {
-          wx.showToast({
-            title: '待办已保存(未加入日历)',
-            icon: 'none',
-            duration: 2000
-          });
-        } else if (calRes.status === 'denied') {
-          // 已弹出引导去设置的 Modal，不重复弹 Toast 覆盖
+          try {
+            await todoManager.update(savedId, { remind: true });
+            this.setData({ isCalendarAdded: true });
+            wx.showToast({ title: '已保存并加入日历', icon: 'success' });
+          } catch (error) {
+            console.error('保存日历添加标记失败:', error);
+            wx.showModal({
+              title: '日历已添加',
+              content: '待办和日历已保存，但本地日历标记保存失败，请勿重复添加。',
+              showCancel: false
+            });
+          }
         } else {
-          wx.showToast({
-            title: isDrawerEdit ? '已保存' : '已添加',
-            icon: 'success'
-          });
+          this.showCalendarError(calRes);
         }
       } else {
-        wx.showToast({
-          title: isDrawerEdit ? '已保存' : '已添加',
-          icon: 'success'
-        });
+        wx.showToast({ title: isDrawerEdit ? '已保存' : '已添加', icon: 'success' });
       }
+      await this.loadTodos();
+      shouldClose = true;
     } catch (err) {
       console.error('保存待办失败:', err);
       wx.showToast({ title: err.message || '保存失败', icon: 'none' });
     } finally {
       this.setData({ creating: false });
+      if (shouldClose) this.closeCreateDrawer();
     }
+  },
+
+  showCalendarError(result) {
+    const messages = {
+      cancelled: '待办已保存，未加入日历',
+      privacy_denied: '待办已保存，未同意隐私授权',
+      unsupported: '待办已保存，当前环境不支持日历',
+      invalid_param: '待办已保存，日历参数不完整',
+      invalid_date: '待办已保存，日历日期无效',
+      tap_gesture_lost: '待办已保存。微信要求日历由点击直接拉起，请再次点击保存即可加入日历'
+    };
+    if (messages[result.status]) {
+      wx.showToast({ title: messages[result.status], icon: 'none', duration: 3000 });
+      return;
+    }
+    if (result.status === 'denied') {
+      wx.showModal({
+        title: '需要日历权限',
+        content: '待办已保存，日历未添加。请在小程序设置及手机系统设置中允许微信写入日历，再重新添加。',
+        confirmText: '去设置',
+        success(res) {
+          if (res.confirm && typeof wx.openSetting === 'function') wx.openSetting();
+        }
+      });
+      return;
+    }
+    const error = result.error || {};
+    const reason = error.errMsg || error.message || String(result.error || '未知错误');
+    wx.showModal({
+      title: '日历未添加',
+      content: `待办已保存。${result.status === 'privacy_missing' ? '请确认后台隐私指引中的日历声明已生效。' : ''}\n${reason}`,
+      showCancel: false
+    });
   },
   /**
    * 模态框中删除当前正在编辑的待办
    */
   onDrawerDelete() {
+    if (this.data.creating) return;
     const { editId, newTitle } = this.data;
     if (!editId) return;
     wx.showModal({
@@ -528,12 +621,11 @@ const PRIORITY_LABELS = { low: '低', normal: '中', high: '高' };
   goCreate() {
     this.openCreateDrawer();
   },
-
   /**
    * 点击待办卡片：在半屏抽屉中打开编辑
    */
   goEdit(e) {
     const id = e.currentTarget.dataset.id;
     this.openEditDrawer(id);
-  }
+  },
 });

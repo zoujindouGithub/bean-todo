@@ -89,6 +89,7 @@
             </view>
             <view wx:if="{{item.remind && item.dueDate && !item.completed}}" class="remind-badge">
               <view class="remind-badge-icon"></view>
+              <text class="remind-badge-text">已加日历</text>
             </view>
           </view>
         </view>
@@ -139,6 +140,7 @@
         value="{{newTitle}}"
         focus="{{inputFocus}}"
         maxlength="60"
+        disabled="{{creating}}"
         bindinput="onNewTitleInput"
         confirm-type="done"
         bindconfirm="onSaveCreate"
@@ -150,6 +152,7 @@
         placeholder-class="drawer-placeholder--sub"
         value="{{newDesc}}"
         maxlength="500"
+        disabled="{{creating}}"
         bindinput="onNewDescInput"
       />
 
@@ -165,7 +168,7 @@
           >{{priorityLabels[item]}}</view>
         </view>
 
-        <picker mode="date" value="{{newDueDate}}" bindchange="onNewDateChange">
+        <picker mode="date" value="{{newDueDate}}" disabled="{{creating}}" bindchange="onNewDateChange">
           <view class="drawer-picker {{newDueDate ? 'drawer-picker--active' : ''}}">
             <view class="picker-cal-icon"></view>
             <text class="picker-label">{{newDueDate ? newDueDate : '截止日期'}}</text>
@@ -174,19 +177,31 @@
         </picker>
       </view>
 
-      <!-- 手机系统日历强提醒开关 (设置截止日期后展示) -->
+      <!-- 专属「已加入日历」状态条（编辑且已加入日历时展示） -->
+      <view class="drawer-calendar-status" wx:if="{{isDrawerEdit && isCalendarAdded}}">
+        <view class="calendar-status-left">
+          <view class="calendar-status-icon"></view>
+          <view class="calendar-status-texts">
+            <text class="calendar-status-title">已添加到手机日历</text>
+            <text class="calendar-status-desc">如需删除或修改提醒，请在手机系统「日历」中操作</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 本次保存时向系统日历添加日程，不代表与系统日历实时同步 -->
       <view class="drawer-remind-row" wx:if="{{newDueDate}}">
         <view class="remind-left">
           <view class="remind-icon"></view>
           <view class="remind-texts">
-            <text class="remind-title">手机日历到期强提醒</text>
-            <text class="remind-desc">截止日早晨 09:00 手机锁屏弹窗与响铃</text>
+            <text class="remind-title">{{isDrawerEdit && isCalendarAdded ? '再次添加到手机日历' : '保存时添加到手机日历'}}</text>
+            <text class="remind-desc">默认截止日 09:00，通知由系统日历控制</text>
           </view>
         </view>
         <switch
           class="remind-switch"
           color="#2f6fed"
           checked="{{newRemind}}"
+          disabled="{{creating}}"
           bindchange="onNewRemindChange"
         />
       </view>
@@ -196,6 +211,7 @@
           wx:if="{{isDrawerEdit}}"
           class="drawer-btn drawer-btn--danger"
           bindtap="onDrawerDelete"
+          disabled="{{creating}}"
         >删除</button>
         <button
           class="drawer-btn drawer-btn--primary {{isDrawerEdit ? '' : 'drawer-btn--full'}}"

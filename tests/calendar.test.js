@@ -1,139 +1,124 @@
-// 手机系统日历强提醒助手专项单元测试套件
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const {
-  computeCalendarTime,
-  addTodoToPhoneCalendar,
-  DEFAULT_REMINDER_HOUR,
-  DEFAULT_REMINDER_MINUTE
-} = require('../utils/calendar');
+const { computeCalendarTime, addTodoToPhoneCalendar } = require('../utils/calendar');
 
-test('系统日历时间戳运算与边界容错测试', async (t) => {
-  await t.test('正常未来日期应严格定位至 09:00:00 且跨度为 1800 秒', () => {
-    const fixedNow = new Date(2026, 8, 15, 8, 0, 0); // 2026-09-15 08:00
-    const res = computeCalendarTime('2026-09-20', fixedNow);
-    assert.ok(res);
-    assert.equal(typeof res.startTime, 'number');
-    assert.equal(typeof res.endTime, 'number');
-    assert.equal(res.endTime - res.startTime, 1800); // 30 分钟
+const todo = { title: '提交报告', desc: '带上附件', dueDate: '2099-09-20', priority: 'high' };
 
-    const startDate = new Date(res.startTime * 1000);
-    assert.equal(startDate.getFullYear(), 2026);
-    assert.equal(startDate.getMonth(), 8); // 9月 (0-indexed)
-    assert.equal(startDate.getDate(), 20);
-    assert.equal(startDate.getHours(), DEFAULT_REMINDER_HOUR);
-    assert.equal(startDate.getMinutes(), DEFAULT_REMINDER_MINUTE);
+function useWx(t, implementation) {
+  const previous = global.wx;
+  global.wx = implementation;
+  t.after(() => {
+    if (previous === undefined) delete global.wx;
+    else global.wx = previous;
   });
+}
 
-  await t.test('当天截止且当前时间已逾 09:00 时应自动顺延 10 分钟', () => {
-    const afternoonNow = new Date(2026, 8, 15, 14, 20, 0); // 2026-09-15 14:20
-    const res = computeCalendarTime('2026-09-15', afternoonNow);
-    assert.ok(res);
-    const startDate = new Date(res.startTime * 1000);
-    // 应比当前时间晚 10 分钟 (14:30)
-    assert.equal(startDate.getHours(), 14);
-    assert.equal(startDate.getMinutes(), 30);
-  });
-
-  await t.test('非法或格式不合规的日期应安全返回 null', () => {
-    assert.equal(computeCalendarTime(''), null);
-    assert.equal(computeCalendarTime('invalid-date'), null);
-    assert.equal(computeCalendarTime('2026-02-31'), null);
+test('未来截止日在设备本地时间 09:00 开始，日程持续 30 分钟', () => {
+  assert.deepEqual(computeCalendarTime('2026-09-20', new Date(2026, 8, 15, 8)), {
+    startTime: new Date(2026, 8, 20, 9).getTime() / 1000,
+    endTime: new Date(2026, 8, 20, 9, 30).getTime() / 1000
   });
 });
 
-test('addTodoToPhoneCalendar 接口包装与调用契约测试', async (t) => {
-  await t.test('缺少标题或截止日期时应直接拦截并返回 invalid_param', async () => {
-    const r1 = await addTodoToPhoneCalendar(null);
-    assert.equal(r1.success, false);
-    assert.equal(r1.status, 'invalid_param');
+test('已过提醒时间顺延十分钟，包括跨午夜', () => {
+  const now = new Date(2026, 8, 20, 23, 55);
+  assert.equal(computeCalendarTime('2026-09-20', now).startTime,
+    new Date(2026, 8, 21, 0, 5).getTime() / 1000);
+});
 
-    const r2 = await addTodoToPhoneCalendar({ title: '没有日期' });
-    assert.equal(r2.success, false);
-    assert.equal(r2.status, 'invalid_param');
+test('无效日期不能创建日程', () => {
+  assert.equal(computeCalendarTime('2026-02-31'), null);
+  assert.equal(computeCalendarTime(''), null);
+});
+
+test('不能把 ID 或更新结果误当成待办写入日历', async (t) => {
+  useWx(t, { addPhoneCalendar() { assert.fail('无效待办不能调用日历'); } });
+  assert.equal((await addTodoToPhoneCalendar('todo-id')).status, 'invalid_param');
+  assert.equal((await addTodoToPhoneCalendar({ updated: 1 })).status, 'invalid_param');
+});
+
+test('隐私授权成功后创建带提醒的系统日程', async (t) => {
+  let authorize;
+  const events = [];
+  useWx(t, {
+    requirePrivacyAuthorize(options) { authorize = options; },
+    addPhoneCalendar(options) {
+      events.push(options);
+      options.success({ errMsg: 'addPhoneCalendar:ok' });
+    }
   });
+  const pending = addTodoToPhoneCalendar(todo);
+  assert.equal(events.length, 0, '未同意隐私前不能写日历');
+  authorize.success({});
+  const result = await pending;
+  assert.equal(result.success, true);
+  assert.equal(events.length, 1);
+  assert.equal(events[0].title, '待办提醒：提交报告');
+  assert.equal(events[0].startTime, new Date(2099, 8, 20, 9).getTime() / 1000);
+  assert.equal(events[0].endTime, String(new Date(2099, 8, 20, 9, 30).getTime() / 1000));
+  assert.equal(events[0].alarm, true);
+  assert.equal(events[0].alarmOffset, 0);
+});
 
-  await t.test('在 Mock 微信环境中验证调用参数完整度与成功回调', async () => {
-    let capturedOptions = null;
-    global.wx = {
-      addPhoneCalendar(options) {
-        capturedOptions = options;
-        options.success({ errMsg: 'addPhoneCalendar:ok' });
-      }
-    };
-
-    const res = await addTodoToPhoneCalendar({
-      title: '上线发布部署',
-      desc: '检查线上静态资源与数据库索引',
-      dueDate: '2026-09-25',
-      priority: 'high'
-    });
-
-    assert.equal(res.success, true);
-    assert.equal(res.status, 'ok');
-    assert.ok(capturedOptions);
-    assert.equal(capturedOptions.title, '待办提醒：上线发布部署');
-    assert.equal(capturedOptions.alarm, true);
-    assert.equal(capturedOptions.alarmOffset, 0);
-    assert.match(capturedOptions.description, /高优先级/);
-    assert.match(capturedOptions.description, /豆芽待办/);
+test('拒绝隐私授权后停止调用，不再尝试日历写入', async (t) => {
+  let writes = 0;
+  useWx(t, {
+    requirePrivacyAuthorize(options) {
+      options.fail({ errno: 104, errMsg: 'requirePrivacyAuthorize:fail user deny' });
+    },
+    addPhoneCalendar(options) { writes += 1; options.success({}); }
   });
+  const result = await addTodoToPhoneCalendar(todo);
+  assert.equal(writes, 0);
+  assert.equal(result.status, 'privacy_denied');
+  assert.equal(result.success, false);
+});
 
-  await t.test('用户拒绝或取消系统日历权限时应柔性标记 cancelled 而不抛异常', async () => {
-    global.wx = {
-      addPhoneCalendar(options) {
-        options.fail({ errMsg: 'addPhoneCalendar:fail cancel' });
-      }
-    };
+test('后台隐私声明缺失与用户拒绝分开报告', async (t) => {
+  const error = { errno: 112, errMsg: 'addPhoneCalendar:fail api scope is not declared in the privacy agreement' };
+  useWx(t, { addPhoneCalendar(options) { options.fail(error); } });
+  const result = await addTodoToPhoneCalendar(todo);
+  assert.equal(result.status, 'privacy_missing');
+  assert.equal(result.error, error);
+});
 
-    const res = await addTodoToPhoneCalendar({
-      title: '买牛奶',
-      dueDate: '2026-09-26'
-    });
-
-    assert.equal(res.success, false);
-    assert.equal(res.status, 'cancelled');
+test('系统授权被拒后返回 denied，调用方可引导设置', async (t) => {
+  useWx(t, {
+    addPhoneCalendar(options) { options.fail({ errMsg: 'addPhoneCalendar:fail auth deny' }); }
   });
+  const result = await addTodoToPhoneCalendar(todo);
+  assert.equal(result.status, 'denied');
+  assert.equal(result.success, false);
+});
 
-  await t.test('系统权限被拒时应标记 denied 并尝试弹窗引导', async () => {
-    let showModalCalled = false;
-    global.wx = {
-      addPhoneCalendar(options) {
-        options.fail({ errMsg: 'addPhoneCalendar:fail auth denied' });
-      },
-      showModal(options) {
-        showModalCalled = true;
-      }
-    };
-
-    const res = await addTodoToPhoneCalendar({
-      title: '买牛奶',
-      dueDate: '2026-09-26'
-    });
-
-    assert.equal(res.success, false);
-    assert.equal(res.status, 'denied');
-    assert.equal(showModalCalled, true);
+test('用户取消日历写入不是添加成功', async (t) => {
+  useWx(t, {
+    addPhoneCalendar(options) { options.fail({ errMsg: 'addPhoneCalendar:fail cancel' }); }
   });
+  const result = await addTodoToPhoneCalendar(todo);
+  assert.equal(result.status, 'cancelled');
+  assert.equal(result.success, false);
+});
 
-  await t.test('未配置隐私协议时应准确捕获 privacy_missing 并弹窗明示', async () => {
-    let showModalCalled = false;
-    global.wx = {
-      addPhoneCalendar(options) {
-        options.fail({ errMsg: 'addPhoneCalendar:fail api scope is not declared in the privacy agreement' });
-      },
-      showModal(options) {
-        showModalCalled = true;
-      }
-    };
-
-    const res = await addTodoToPhoneCalendar({
-      title: '买牛奶',
-      dueDate: '2026-09-26'
-    });
-
-    assert.equal(res.success, false);
-    assert.equal(res.status, 'privacy_missing');
-    assert.equal(showModalCalled, true);
+test('隐私接口抛异常时返回失败且不触碰日历', async (t) => {
+  const error = new Error('privacy bridge unavailable');
+  useWx(t, {
+    requirePrivacyAuthorize() { throw error; },
+    addPhoneCalendar() { assert.fail('隐私检查失败不能调用日历'); }
   });
+  const result = await addTodoToPhoneCalendar(todo);
+  assert.equal(result.status, 'fail');
+  assert.equal(result.error, error);
+});
+
+test('手势丢失或过期错误被归类为 tap_gesture_lost', async (t) => {
+  useWx(t, {
+    requirePrivacyAuthorize(options) { options.success({}); },
+    addPhoneCalendar(options) {
+      options.fail({ errMsg: 'addPhoneCalendar:fail can only be invoked by user TAP gesture' });
+    }
+  });
+  const result = await addTodoToPhoneCalendar(todo);
+  assert.equal(result.status, 'tap_gesture_lost');
+  assert.equal(result.success, false);
 });
