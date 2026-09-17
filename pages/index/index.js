@@ -628,4 +628,24 @@ const PRIORITY_LABELS = { low: '低', normal: '中', high: '高' };
     const id = e.currentTarget.dataset.id;
     this.openEditDrawer(id);
   },
+  /**
+   * 转发分享给微信好友（右上角「…」→ 转发）
+   * 未定义时微信会隐藏/置灰转发入口。
+   */
+  onShareAppMessage() {
+    return {
+      title: '豆芽待办 · 清爽高效的待办清单',
+      path: 'pages/index/index'
+    };
+  },
+
+  /**
+   * 分享到朋友圈
+   */
+  onShareTimeline() {
+    return {
+      title: '豆芽待办 · 清爽高效的待办清单',
+      query: ''
+    };
+  }
 });
